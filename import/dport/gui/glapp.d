@@ -127,7 +127,7 @@ private:
          * KMOD_GUI      * (KMOD_LGUI|KMOD_RGUI)
          * KMOD_RESERVED * reserved for future use
          */
-        vh.keyboard( mpos, 
+        vh.keyboard( ivec2( mpos.x, vh.rect.h - mpos.y ), 
                 KeyboardEvent( state == SDL_PRESSED, 
                                scancode,
                                cast(wchar)symchar, 
@@ -146,7 +146,8 @@ private:
          * SDL_BUTTON_X2
          */
 
-        vh.mouse( mpos, MouseEvent( 
+        vh.mouse( ivec2( mpos.x, vh.rect.h - mpos.y ),
+                 MouseEvent( 
                     state == SDL_PRESSED ? MouseEvent.Type.PRESSED : MouseEvent.Type.RELEASED,
                     button ) );
 
@@ -163,7 +164,8 @@ private:
          * SDL_BUTTON_X1MASK
          * SDL_BUTTON_X2MASK
          */
-        vh.mouse( mpos, MouseEvent( MouseEvent.Type.MOTION, state ) );
+        vh.mouse( ivec2( mpos.x, vh.rect.h - mpos.y ), 
+                MouseEvent( MouseEvent.Type.MOTION, state ) );
     }
 
     static this() { singleton = new GLApp(); }
