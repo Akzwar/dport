@@ -12,6 +12,8 @@ import dport.gl.shader;
 import dport.gl.object;
 import dport.gl.texture;
 
+import dport.gui.element;
+
 import std.string;
 
 mixin( defaultModuleLogUtils("DTException") );
@@ -143,36 +145,6 @@ public:
 }
 
 /++
- исходники шейдера, "рекомендуемого" для отрисовки текста
- +/
-private enum ShaderSources SS_Text = 
-{
-r"
-uniform vec2 winsize;
-
-attribute vec2 coord;
-attribute vec2 tcrd;
-
-varying vec2 texcoord;
-
-void main(void)
-{
-    gl_Position = vec4( 2.0 * coord / winsize - vec2( 1.0, 1.0 ), -0.1, 1.0);
-    texcoord = tcrd;
-}
-",
-
-r"
-uniform sampler2D ttu;
-varying vec2 texcoord;
-uniform vec4 color;
-
-void main(void)
-{ gl_FragColor = vec4( 1, 1, 1, texture2D( ttu, texcoord ).a ) * color; }
-"
-};
-
-/++
  информация об отрисовываемом текте
  +/
 struct TextParam
@@ -186,39 +158,62 @@ struct TextParam
 /++
  отрисовка строки текста
  +/
-class TextString: GLVAO
+class TextString: Element
 {
 private:
-
     /++ 
-        убирает перед отрисовкой GL_DEPTH_TEST 
-        выставляет в шейдере uniform текстуру и цвет
+        выставляет в шейдере uniform текстуру и флаг использования 1
      +/
-    final void predraw_hook()
+    void predraw()
     {
-        glDisable( GL_DEPTH_TEST );
-        shader.setUniform!int( textureShaderName, GL_TEXTURE0 );
-        shader.setUniformVec( colorShaderName , tp.color );
-        tex.use(); 
+        shader.setUniform!int( "use_texture", 1 );
+        shader.setUniform!int( "ttu", GL_TEXTURE0 );
+        tex.use();
     }
 
-    /++ возвращает GL_DEPTH_TEST +/
-    final void postdraw_hook()
+    class _drawrect: GLVAO
     {
-        glEnable( GL_DEPTH_TEST );
-        tex.use(0);
+        static float[] vecToArray(string S,T)( vec!(S,T)[] arr, ulong count=4 ) 
+        {
+            float[] ret;
+            foreach( i; 0 .. count ) ret ~= arr[i%arr.length].data;
+            return ret;
+        }
+
+        this( ShaderProgram sp )
+        {
+            super( sp );
+            genBufferWithData( "crd", [ 0,  0, 100, 0, 0, 10, 100, 10 ] );
+            setAttribPointer( "crd", "vertex", 2, GL_FLOAT );
+
+            genBufferWithData( "clr", vecToArray( [col4( 1.0, 1.0, 1.0, 1.0 )] ) );
+            setAttribPointer( "clr", "color", 4, GL_FLOAT );
+
+            //genBufferWithData( "uv", [ 0.0f,  0, 1,  0,  0,  1, 1, 1 ] );
+            genBufferWithData( "uv", [ 0.0f,  1, 1,  1,  0,  0, 1, 0 ] );
+            setAttribPointer( "uv", "uv", 2, GL_FLOAT );
+
+            this.draw.connect( (){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
+        }
+
+        void setColor( in col4 c ) { bufferData( "clr", vecToArray( [c] ) ); }
+        void reshape( in irect r ) 
+        { 
+            irect rr = r;
+            if( center )
+                rr.pt[0] = ( bbox.pt[1] - ivec2( r.x + r.w, r.y + r.h ) ) / 2;
+            bufferData( "crd", rr.points!float( vec2(0,0) ) );
+        }
     }
+
+    _drawrect dr;
+
 protected:
-
-    string colorShaderName="color"; /// имя униформа цвета в шейдере
-    string textureShaderName="ttu"; /// имя униформа текстуры в шейдере
-    string coordShaderName="coord"; /// имя атрибута координат в шейдере
-    string texcoordShaderName="tcrd"; /// имя атрибута текстурных координат в шейдере
 
     GLTexture2D tex;
     FontRender fr;
-    frect bbox; /// ограничивающий прямоугольник (в оконных координатах)
     TextParam tp;
+    bool center = 0;
 
     /++ рендерит текст, обновляет текстуру и boundingbox (bbox) +/
     void update()
@@ -248,43 +243,27 @@ protected:
             buf ~= g;
 
             findminmax( g.rect.pt[0] );
-            findminmax( g.rect.pt[0] + g.rect.pt[1] );
-
-            //if( min.x > g.rect.x ) min.x = g.rect.x;
-            //if( min.y > g.rect.y ) min.y = g.rect.y;
-            //if( min.x > g.rect.x + g.rect.w ) min.x = g.rect.x + g.rect.w;
-            //if( min.y > g.rect.y - g.rect.h ) min.y = g.rect.y - g.rect.h;
-
-            //if( max.x < g.rect.x ) max.x = g.rect.x;
-            //if( max.y < g.rect.y ) max.y = g.rect.y;
-            //if( max.x < g.rect.x + g.rect.w ) max.x = g.rect.x + g.rect.w;
-            //if( max.y < g.rect.y - g.rect.h ) max.y = g.rect.y - g.rect.h;
+            findminmax( g.rect.pt[0] + ivec2( g.rect.w, -g.rect.h ) );
         }
 
-        GlyphInfo res;
-        // TODO: проверить а минус ли тут (-min.x) 
-        res.rect = irect( ivec2(-min.x,min.y), max - min );
+        res.rect = irect( min, max - min );
         res.buffer.length = res.rect.w * res.rect.h;
 
         foreach( g; buf )
         {
-            auto yy = g.rect.y - min.y;
+            auto yy = res.rect.h - ( g.rect.y - min.y );
             auto xx = g.rect.x - min.x;
             foreach( r; 0 .. g.rect.h )
                 foreach( v; 0 .. g.rect.w )
-                    res.buffer[ (yy - r - 1) * res.rect.w + xx + v ] = 
-                        g.buffer[ r * g.rect.w + v ];
+                {
+                    long index = (yy + r) * res.rect.w + xx + v;
+                    res.buffer[ index ] = g.buffer[ r * g.rect.w + v ];
+                }
         }
         fillTexture( res );
-        bbox = frect( res.rect );
+        dr.setColor( tp.color );
     }
-
-    void draw_hook()
-    {
-        bufferData( "crd", bbox.points!float( tp.pos ) );
-        glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 );
-        debug log.trace( "draw static string: ", tp.str );
-    }
+    GlyphInfo res;
 
     void fillTexture( GlyphInfo g )
     {
@@ -301,10 +280,12 @@ public:
         sp = шейдер, предположительно единый для всего gui-текста
         fontname = имя шрифта
      +/
-    this( ShaderProgram sp, string fontname="LinBiolinum_Rah.ttf" )
+    this( Element par, string fontname="LinBiolinum_Rah.ttf" )
     {
-        if( sp is null ) throw new DTException( "text shader is null" );
-        super( sp );
+        super( par );
+        this.processEvent = 0;
+
+        dr = new _drawrect( this.shader );
         tex = new GLTexture2D( isize( 100, 10 ) );
 
         version(Windows) 
@@ -318,20 +299,18 @@ public:
             fr = new FreeTypeRender( fontname );
         }
 
-        genBufferWithData( "crd", [ 0,  0, 100, 0, 0, 10, 100, 10 ] );
-        setAttribPointer( "crd", coordShaderName, 2, GL_FLOAT );
+        draw.addPair( &predraw, (){ tex.use(0); } );
+        draw.addPair( (){ dr.reshape( res.rect ); }, (){} );
+        draw.connect( &(dr.draw.opCall) );
 
-        genBufferWithData( "texcrd", [ 0.0f,  0, 1,  0,  0,  1, 1, 1 ] );
-        setAttribPointer( "texcrd", texcoordShaderName, 2, GL_FLOAT );
-
-        draw.addPair( &predraw_hook, &postdraw_hook );
-        draw.connect( &draw_hook );
-
-        debug log.info( "DynText create" );
+        debug log.info( "TextString create" );
     }
 
     /++ выставляет новые параметры текста +/
-    final void setTextParam( in TextParam ntp ){ tp = ntp; update(); }
-    /++ возвращает bounding box +/
-    @property vrect!float rect() const { return bbox; }
+    final void setTextParam( in TextParam ntp, bool align_center=0 )
+    { 
+        tp = ntp; 
+        center = align_center;
+        update();
+    }
 }
