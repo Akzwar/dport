@@ -127,7 +127,7 @@ private:
          * KMOD_GUI      * (KMOD_LGUI|KMOD_RGUI)
          * KMOD_RESERVED * reserved for future use
          */
-        vh.keyboard( ivec2( mpos.x, vh.rect.h - mpos.y ), 
+        vh.keyboard( ivec2( mpos.x, mpos.y ), 
                 KeyboardEvent( state == SDL_PRESSED, 
                                scancode,
                                cast(wchar)symchar, 
@@ -146,7 +146,7 @@ private:
          * SDL_BUTTON_X2
          */
 
-        vh.mouse( ivec2( mpos.x, vh.rect.h - mpos.y ),
+        vh.mouse( ivec2( mpos.x, mpos.y ),
                  MouseEvent( 
                     state == SDL_PRESSED ? MouseEvent.Type.PRESSED : MouseEvent.Type.RELEASED,
                     button ) );
@@ -164,7 +164,7 @@ private:
          * SDL_BUTTON_X1MASK
          * SDL_BUTTON_X2MASK
          */
-        vh.mouse( ivec2( mpos.x, vh.rect.h - mpos.y ), 
+        vh.mouse( ivec2( mpos.x, mpos.y ), 
                 MouseEvent( MouseEvent.Type.MOTION, state ) );
     }
 

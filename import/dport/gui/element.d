@@ -70,6 +70,22 @@ void main(void)
 class Element: View
 {
 private:
+    /++ возвращает смещение от верхнего левого края +/
+    @property ivec2 offset() const
+    {
+        if( parent )
+        {
+            int x = bbox.x + parent.offset.x;
+            int y = parent.offset.y + parent.bbox.h - ( bbox.y + bbox.h );
+            return ivec2( x, y );
+            //return bbox.pt[0] + parent.offset; 
+        }
+        else return bbox.pt[0];
+    }
+
+    ivec2 localMouse( in ivec2 mpos )
+    { return mpos - bbox.pos; }
+
     void predraw()
     {
         glViewport( offset.x, offset.y, bbox.w, bbox.h );
@@ -127,17 +143,17 @@ public:
                 (){ foreach_reverse( ch; childs ) ch.draw(); } );
 
         keyboard.addCondition( (mpos, key){ 
-                return find( mpos ); 
+                return find( localMouse( mpos ) ); 
                 }, 0 );
         keyboard.connectAlt( ( mpos, key ){
-                if( cur ) cur.keyboard( mpos-bbox.pos, key );
+                if( cur ) cur.keyboard( localMouse( mpos ), key );
                 });
 
         mouse.addCondition( (mpos, me){ 
-                return find( mpos ); 
+                return find( localMouse( mpos ) ); 
                 }, 0 );
         mouse.connectAlt( ( mpos, me ){
-                if( cur ) cur.mouse( mpos-bbox.pos, me );
+                if( cur ) cur.mouse( localMouse( mpos ), me );
                 });
 
         idle.connect( ( dtime ) {
@@ -145,10 +161,4 @@ public:
                 });
     }
     
-    /++ возвращает смещение от верхнего левого края +/
-    @property ivec2 offset() const
-    {
-        if( parent ) return bbox.pt[0] + parent.offset; 
-        else return bbox.pt[0];
-    }
 }
