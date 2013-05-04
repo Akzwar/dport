@@ -84,7 +84,7 @@ class ButtonLabel: ButtonDrawContent
 
     override // ButtonDrawContent
     {
-        void setRect( in irect r ) { label.reshape( r ); }
+        void setRect( in irect r ) { label.reshape( irect( 0, 0, r.w, r.h ) ); }
 
         void onDraw() { label.draw(); }
         void onIdle( real dtime ){ }
@@ -159,7 +159,7 @@ class TestButton: Button
         super( par, rect );
 
         shape = new ButtonShape( this.shader, rect );
-        label = new ButtonLabel( par, str );
+        label = new ButtonLabel( this, str );
 
         content ~= shape;
         content ~= label;

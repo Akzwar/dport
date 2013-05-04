@@ -78,13 +78,11 @@ private:
             int x = bbox.x + parent.offset.x;
             int y = parent.offset.y + parent.bbox.h - ( bbox.y + bbox.h );
             return ivec2( x, y );
-            //return bbox.pt[0] + parent.offset; 
         }
         else return bbox.pt[0];
     }
 
-    ivec2 localMouse( in ivec2 mpos )
-    { return mpos - bbox.pos; }
+    ivec2 localMouse( in ivec2 mpos ){ return mpos - bbox.pos; }
 
     void predraw()
     {
@@ -105,7 +103,7 @@ protected:
     {
         foreach_reverse( v; childs )
         {
-            if( ( mpos in v.rect ) && v.processEvent )
+            if( v.processEvent && v.visible && ( mpos in v.rect ) )
             {
                 if( cur != v ) 
                 {
@@ -127,6 +125,7 @@ protected:
     Element parent;
 
 public:
+    bool visible = true;
 
     this( Element par=null )
     {
@@ -140,7 +139,7 @@ public:
             shader = new ShaderProgram( SS_ELEMENT );
 
         draw.addPair( &predraw, 
-                (){ foreach_reverse( ch; childs ) ch.draw(); } );
+                (){ foreach_reverse( ch; childs ) if( ch.visible ) ch.draw(); } );
 
         keyboard.addCondition( (mpos, key){ 
                 return find( localMouse( mpos ) ); 
