@@ -232,16 +232,16 @@ public:
                     //    break;
                     case SDL_KEYDOWN: goto case;
                     case SDL_KEYUP:
-                        if( SDLK_ESCAPE == event.key.keysym.sym )
-                        {
-                            debug log.Debug( "press ESC" );
-                            run = false;
-                        }
-                        else
-                            keyboard_eh( mpos, event.key.state,
-                                    event.key.keysym.scancode,
-                                    event.key.keysym.unicode,
-                                    event.key.keysym.mod );
+                        //if( 0 && SDLK_ESCAPE == event.key.keysym.sym )
+                        //{
+                        //    debug log.Debug( "press ESC" );
+                        //    run = false;
+                        //}
+                        //else
+                        keyboard_eh( mpos, event.key.state,
+                                event.key.keysym.scancode,
+                                event.key.keysym.unicode,
+                                event.key.keysym.mod );
                         break;
                     case SDL_MOUSEBUTTONDOWN: goto case;
                     case SDL_MOUSEBUTTONUP:
