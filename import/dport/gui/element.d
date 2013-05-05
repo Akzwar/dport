@@ -84,9 +84,20 @@ private:
 
     ivec2 localMouse( in ivec2 mpos ){ return mpos - bbox.pos; }
 
+    void setViewport( in irect view )
+    { glViewport( view.x, view.y, view.w, view.h ); }
+
+    irect checkRect( in irect ch )
+    {
+        // TODO: продумать: область рисования ограничивается родителем
+        return ch;
+    }
+
     void predraw()
     {
-        glViewport( offset.x, offset.y, bbox.w, bbox.h );
+        auto r = irect( offset, bbox.size );
+        if( parent ) setViewport( parent.checkRect( r ) );
+        else setViewport( r );
         glDisable( GL_DEPTH_TEST );
         shader.setUniformVec( "winsize", vec2( bbox.size ) );
         shader.setUniform!int( "use_texture", 0 );
@@ -138,8 +149,11 @@ public:
         else 
             shader = new ShaderProgram( SS_ELEMENT );
 
-        draw.addPair( &predraw, 
-                (){ foreach_reverse( ch; childs ) if( ch.visible ) ch.draw(); } );
+        draw.addPair( &predraw, (){ 
+                foreach_reverse( ch; childs ) 
+                    if( ch.visible ) 
+                        ch.draw(); 
+                });
 
         keyboard.addCondition( (mpos, key){ 
                 return find( localMouse( mpos ) ); 
@@ -155,9 +169,10 @@ public:
                 if( cur ) cur.mouse( localMouse( mpos ), me );
                 });
 
+        release.connect( (){ if( cur ) cur.release(); } );
+
         idle.connect( ( dtime ) {
             foreach( ch; childs ) ch.idle( dtime );
                 });
     }
-    
 }
