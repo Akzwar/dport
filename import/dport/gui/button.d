@@ -79,6 +79,11 @@ class ButtonLabel: ButtonDrawContent
     this( Element parent, wstring text )
     {
         label = new TextString( parent );
+        label.setTextParam( TextParam( text, 18 ), 1 );
+    }
+
+    void setText( wstring text )
+    {
         label.setTextParam( TextParam( text ), 1 );
     }
 
@@ -149,12 +154,12 @@ class ButtonShape: GLVAO, ButtonDrawContent
     }
 }
 
-class TestButton: Button
+class SimpleButton: Button
 {
     ButtonLabel label;
     ButtonShape shape;
 
-    this( Element par, in irect rect, wstring str )
+    this( Element par, in irect rect, wstring str=""w )
     {
         super( par, rect );
 
@@ -165,5 +170,10 @@ class TestButton: Button
         content ~= label;
 
         setUpContent();
+    }
+
+    void setLabel( wstring str )
+    {
+        label.setText( str );
     }
 }

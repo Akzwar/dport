@@ -183,14 +183,13 @@ public:
 
     void setView( View nv )
     {
-        if( singleton.vh !is null )
-            vh.release();
+        if( vh !is null ) vh.release();
         vh = nv;
 
         glViewport( 0, 0, winsize.w, winsize.h );
         vh.rect = irect( 0, 0, winsize.w, winsize.h );
         vh.activate();
-        debug log.Debug( "set view" );
+        debug log.Debug( "set view: ", vh.rect._rect );
     }
 
     void setVideoMode( uint w, uint h )

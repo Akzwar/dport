@@ -7,6 +7,9 @@ import dport.gl.shader,
 
 public import dport.gui.base;
 
+import dport.utils.logsys;
+mixin( defaultModuleLogUtils("ElemException") );
+
 import std.conv;
 
 /++
