@@ -200,8 +200,11 @@ private:
         void reshape( in irect r ) 
         { 
             irect rr = r;
-            if( center )
-                rr.pt[0] = ( bbox.pt[1] - ivec2( r.x + r.w, r.y + r.h ) ) / 2;
+            if( center ) 
+            {
+                rr.x = ( bbox.w - r.x - r.w ) / 2;
+                rr.y = cast(int)(bbox.h/2.0 + r.y - tp.height/3.0);
+            }
             bufferData( "crd", rr.points!float( vec2(0,0) ) );
         }
     }

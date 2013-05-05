@@ -76,10 +76,10 @@ public:
 class ButtonLabel: ButtonDrawContent
 {
     TextString label;
-    this( Element parent, wstring text )
+    this( Element parent, wstring text, uint h=14 )
     {
         label = new TextString( parent );
-        label.setTextParam( TextParam( text, 18 ), 1 );
+        label.setTextParam( TextParam( text, h ), 1 );
     }
 
     void setText( wstring text )
@@ -111,9 +111,9 @@ class ButtonShape: GLVAO, ButtonDrawContent
     static float[] coldata( in col4 c )
     { return c.data ~ c.data ~ c.data ~ c.data; }
 
-    auto not_active_col = col4( .8f, .8f, .8f, .4f );
-    auto is_active_col  = col4( .1f, .1f, .4f, .8f );
-    auto on_press_col   = col4( .3f, .3f, .1f, 1.0f );
+    auto not_active_col = col4( .3f, .3f, .3f, .8f );
+    auto is_active_col  = col4( .1f, .6f, .9f, .6f );
+    auto on_press_col   = col4( .8f, .7f, .1f, .9f );
 
     col4 curColor, lastColor;
     real speed = 10;
@@ -164,7 +164,7 @@ class SimpleButton: Button
         super( par, rect );
 
         shape = new ButtonShape( this.shader, rect );
-        label = new ButtonLabel( this, str );
+        label = new ButtonLabel( this, str, rect.h - 10 );
 
         content ~= shape;
         content ~= label;
