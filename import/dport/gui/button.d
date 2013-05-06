@@ -159,7 +159,7 @@ class SimpleButton: Button
     ButtonLabel label;
     ButtonShape shape;
 
-    this( Element par, in irect rect, wstring str=""w )
+    this( Element par, in irect rect, wstring str=""w, void delegate() onclick=null )
     {
         super( par, rect );
 
@@ -170,6 +170,9 @@ class SimpleButton: Button
         content ~= label;
 
         setUpContent();
+
+        if( onclick !is null )
+            onClick.connect( onclick );
     }
 
     void setLabel( wstring str )
