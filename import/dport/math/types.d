@@ -402,6 +402,7 @@ alias vec!("xy",long) ilvec2;
 alias vec!("xy",float) vec2;
 alias vec!("xyz",float) vec3;
 alias vec!("xyzw",float) vec4;
+alias vec!("ijka",float) quat;
 alias vec!("rgb",float) col3;
 alias vec!("rgba",float) col4;
 
