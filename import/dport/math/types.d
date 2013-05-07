@@ -436,7 +436,6 @@ unittest
 struct mat(size_t H, size_t W,dtype=float)
     if( W > 0 && H > 0 )
 {
-    //alias float dtype;
     alias mat!(H,W,dtype) self;
     enum w = W;
     enum h = H;
