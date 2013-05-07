@@ -218,6 +218,32 @@ struct vec( string S, T=real )
         if( S.length == 3 && op == "*" && isComp!(G,E,S,T) )
     { return ( this = opBinary!op(b) ); }
 
+    /++ для кватернионов +/
+    static if( S == "ijka" )
+    {
+        static stype fromAngle(string G,E)( T alpha, in vec!(G,E) b )
+        { return stype( b * sin( alpha / 2.0 ), cos( alpha / 2.0 ) ); }
+
+        auto opBinary(string op,E)( in vec!(S,E) b ) const
+            if( is( typeof( data[0] * b.data[0] ) : T ) && op == "*" )
+        {
+            return stype( this.ijk * b.ijk + this.ijk * b.a + b.ijk * this.a,
+                    this.a * b.a - (this.ijk ^ b.ijk) );
+        }
+
+        auto rot(string G,E)( in vec!(G,E) b ) const
+            if( is( typeof( data[0] * b.data[0] ) : T ) && 
+                    G.length == 3 )
+        { return vec!(G,T)( (this * stype( b, 0 ) * inv).ijk ); }
+
+        @property {
+            T norm() const { return this ^ this; }
+            T mag() const { return sqrt( norm ); }
+            auto con() const { return stype( -this.ijk, this.a ); }
+            auto inv() const { return con / norm; }
+        }
+    }
+
     @property ref T opDispatch(string v,Args...)( Args args )
         if( v.length == 1 && CT_getIndex(S,v) >= 0 && Args.length == 0 )
     { return data[CT_getIndex(S,v)]; }
@@ -285,6 +311,28 @@ unittest
     assert( is( typeof( rclr ) == color ) );
     xclr = colorA( xclr.bga, 0.0 );
     assert( xclr == colorA( 0, 1, 1, 0 ) );
+}
+
+unittest
+{
+    alias vec!("ijka",float) quat;
+    alias vec!("xyz", float) vec3;
+
+    auto q1 = quat.fromAngle( 90/180.0 * PI, vec3( 0, 0, 1 ) );
+    auto y = q1.rot( vec3( 1, 0, 0 ) );
+    assert( (y - vec3( 0, 1, 0 )).len < 1e-5 );
+    auto y2 = q1.rot( vec3( 10, 0, 0 ) );
+    assert( (y2 - vec3( 0, 10, 0 )).len < 1e-5 );
+    auto mx = (q1*q1).rot( vec3( 1, 0, 0 ) );
+    assert( (mx - vec3(-1,0,0)).len < 1e-5 );
+
+    double omega = PI / 2.0, dt = 0.01;
+    q1 = quat.fromAngle( 0, vec3( 0, 0, 1 ) );
+    auto axis = vec3( 0, 0, 1 );
+    foreach( i; 0 .. 100 )
+        q1 += ( quat( axis*omega, 0 )*q1*0.5 ) * dt;
+    mx = q1.rot( vec3( 1, 0, 0 ) );
+    assert( (mx - vec3(0,1,0)).len < 1e-3 );
 }
 
 struct vrect(T)
