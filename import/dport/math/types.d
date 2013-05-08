@@ -463,6 +463,80 @@ struct mat(size_t H, size_t W,dtype=float)
                     ret[i,j] = i==j ? s ? vals[i%s] : 1.0 : 0.0;
             return ret;
         }
+
+        static if( W == 4 )
+        {
+            static auto fromQuatPos( quat q, vec3 p )
+            {
+                auto xx = q.i ^^ 2;
+                auto xy = q.i * q.j;
+                auto xz = q.i * q.k;
+                auto xw = q.i * q.a;
+
+                auto yy = q.j ^^ 2;
+                auto yz = q.j * q.k;
+                auto yw = q.j * q.a;
+
+                auto zz = q.k ^^ 2;
+                auto zw = q.k * q.a;
+
+                self ret;
+
+                ret.data[0]  = 1 - 2 * ( yy + zz );
+                ret.data[1]  =     2 * ( xy - zw );
+                ret.data[2]  =     2 * ( xz + yw );
+
+                ret.data[4]  =     2 * ( xy + zw );
+                ret.data[5]  = 1 - 2 * ( xx + zz );
+                ret.data[6]  =     2 * ( yz - xw );
+
+                ret.data[8]  =     2 * ( xz - yw );
+                ret.data[9]  =     2 * ( yz - xw );
+                ret.data[10] = 1 - 2 * ( xx + yy );
+
+                ret.data[3]  = p.x;
+                ret.data[7]  = p.y;
+                ret.data[11] = p.z;
+
+                ret.data[12] = ret.data[13] = ret.data[14] = 0;
+                ret.data[15] = 1;
+
+                return ret;
+            }
+        }
+        else static if( W == 3 )
+        {
+            static auto fromQuat( quat q )
+            {
+                auto xx = q.i ^^ 2;
+                auto xy = q.i * q.j;
+                auto xz = q.i * q.k;
+                auto xw = q.i * q.a;
+
+                auto yy = q.j ^^ 2;
+                auto yz = q.j * q.k;
+                auto yw = q.j * q.a;
+
+                auto zz = q.k ^^ 2;
+                auto zw = q.k * q.a;
+
+                self ret;
+
+                ret.data[0] = 1 - 2 * ( yy + zz );
+                ret.data[1] =     2 * ( xy - zw );
+                ret.data[2] =     2 * ( xz + yw );
+
+                ret.data[3] =     2 * ( xy + zw );
+                ret.data[4] = 1 - 2 * ( xx + zz );
+                ret.data[5] =     2 * ( yz - xw );
+
+                ret.data[6] =     2 * ( xz - yw );
+                ret.data[7] =     2 * ( yz - xw );
+                ret.data[8] = 1 - 2 * ( xx + yy );
+
+                return ret;
+            }
+        }
     }
 
     dtype[H*W] data = mixin( indentstr() );
@@ -726,4 +800,31 @@ unittest
     foreach( i; 0 .. gg1.h )
         foreach( j; 0 .. gg1.w )
             assert( abs( gg1[i,j] - cast(float)(i==j) ) < 1.0e-6 );
+}
+
+unittest
+{
+    auto q1 = quat.fromAngle( 2.7, vec3(0,0,1) );
+    auto m1 = mat3.fromQuat( q1 );
+
+    auto v1 = vec3( 1,0,0 );
+
+    auto r1 = q1.rot( v1 );
+    auto r2 = m1 * v1;
+
+    assert( (r1 - r2).len < 1e-5 );
+}
+
+unittest
+{
+    auto q1 = quat.fromAngle( 2.7, vec3(0,0,1) );
+    auto p1 = vec3( 10, 5, 2 );
+    auto m1 = mat4.fromQuatPos( q1, p1 );
+
+    auto v1 = vec3( 1,0,0 );
+
+    auto r1 = q1.rot( v1 ) + p1;
+    auto r2 = m1 * vec4( v1 , 1 );
+
+    assert( (r1 - r2.xyz).len < 1e-5 );
 }
