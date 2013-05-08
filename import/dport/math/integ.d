@@ -65,9 +65,6 @@ unittest
     assert( abs( state2.x - v0*t - a*t*t/2.0 ) <= step*1e-3 );
 }
 
-
-private
-{
 import std.string;
 
 string opStruct( string[] fields, string op, string bname )
@@ -135,8 +132,6 @@ unittest
     assert( isTrueFieldsStr( "ok.no" ) );
 }
 
-}
-
 mixin template IntegState( string fields_str )
     if( isTrueFieldsStr( fields_str ) )
 {
@@ -191,4 +186,7 @@ unittest
     auto i2 = inertial( 2 );
     auto i3 = i1 * 0.4 - i2 * .1;
     assert( i3.val == i1.val * 0.4 - i2.val * .1 );
+
+    assert( is( typeof( p1 + p2 ) : point ) );
+    assert( is( typeof( p2 * 1.1 ) : point ) );
 }
