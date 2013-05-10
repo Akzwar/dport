@@ -468,73 +468,55 @@ struct mat(size_t H, size_t W,dtype=float)
         {
             static auto fromQuatPos( quat q, vec3 p )
             {
-                auto xx = q.i ^^ 2;
-                auto xy = q.i * q.j;
-                auto xz = q.i * q.k;
-                auto xw = q.i * q.a;
+                q /= q.len2;
 
-                auto yy = q.j ^^ 2;
-                auto yz = q.j * q.k;
-                auto yw = q.j * q.a;
+                float wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
 
-                auto zz = q.k ^^ 2;
-                auto zw = q.k * q.a;
+                x2 = q.i + q.i;
+                y2 = q.j + q.j;
+                z2 = q.k + q.k;
+                xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
+                yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
+                wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
 
-                self ret;
+                self m;
 
-                ret.data[0]  = 1 - 2 * ( yy + zz );
-                ret.data[1]  =     2 * ( xy - zw );
-                ret.data[2]  =     2 * ( xz + yw );
+                m[0,0]=1.0f-(yy+zz); m[0,1]=xy-wz;        m[0,2]=xz+wy;
+                m[1,0]=xy+wz;        m[1,1]=1.0f-(xx+zz); m[1,2]=yz-wx;
+                m[2,0]=xz-wy;        m[2,1]=yz+wx;        m[2,2]=1.0f-(xx+yy);
 
-                ret.data[4]  =     2 * ( xy + zw );
-                ret.data[5]  = 1 - 2 * ( xx + zz );
-                ret.data[6]  =     2 * ( yz - xw );
+                m[0,3] = p.x;
+                m[1,3] = p.y;
+                m[2,3] = p.z;
 
-                ret.data[8]  =     2 * ( xz - yw );
-                ret.data[9]  =     2 * ( yz - xw );
-                ret.data[10] = 1 - 2 * ( xx + yy );
+                m[3,0] = m[3,1] = m[3,2] = 0;
+                m[3,3] = 1;
 
-                ret.data[3]  = p.x;
-                ret.data[7]  = p.y;
-                ret.data[11] = p.z;
-
-                ret.data[12] = ret.data[13] = ret.data[14] = 0;
-                ret.data[15] = 1;
-
-                return ret;
+                return m;
             }
         }
         else static if( W == 3 )
         {
             static auto fromQuat( quat q )
             {
-                auto xx = q.i ^^ 2;
-                auto xy = q.i * q.j;
-                auto xz = q.i * q.k;
-                auto xw = q.i * q.a;
+                q /= q.len2;
 
-                auto yy = q.j ^^ 2;
-                auto yz = q.j * q.k;
-                auto yw = q.j * q.a;
+                float wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
 
-                auto zz = q.k ^^ 2;
-                auto zw = q.k * q.a;
+                x2 = q.i + q.i;
+                y2 = q.j + q.j;
+                z2 = q.k + q.k;
+                xx = q.i * x2;   xy = q.i * y2;   xz = q.i * z2;
+                yy = q.j * y2;   yz = q.j * z2;   zz = q.k * z2;
+                wx = q.a * x2;   wy = q.a * y2;   wz = q.a * z2;
 
-                self ret;
+                self m;
 
-                ret.data[0] = 1 - 2 * ( yy + zz );
-                ret.data[1] =     2 * ( xy - zw );
-                ret.data[2] =     2 * ( xz + yw );
+                m[0,0]=1.0f-(yy+zz); m[0,1]=xy-wz;        m[0,2]=xz+wy;
+                m[1,0]=xy+wz;        m[1,1]=1.0f-(xx+zz); m[1,2]=yz-wx;
+                m[2,0]=xz-wy;        m[2,1]=yz+wx;        m[2,2]=1.0f-(xx+yy);
 
-                ret.data[3] =     2 * ( xy + zw );
-                ret.data[4] = 1 - 2 * ( xx + zz );
-                ret.data[5] =     2 * ( yz - xw );
-
-                ret.data[6] =     2 * ( xz - yw );
-                ret.data[7] =     2 * ( yz - xw );
-                ret.data[8] = 1 - 2 * ( xx + yy );
-
-                return ret;
+                return m;
             }
         }
     }
