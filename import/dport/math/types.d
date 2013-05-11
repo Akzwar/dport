@@ -155,6 +155,16 @@ struct vec( string S, T=real )
         return ret;
     }
 
+    auto elem(string op, string G,E)( in vec!(G,E) b ) const
+        if( (op == "+" || op == "-" || op == "*" || op == "/" ) &&
+                isComp!(G,E,S,T) )
+    {
+        stype ret = stype(this);
+        foreach( i, ref val; ret.data )
+            mixin( "val = data[i] " ~ op ~ " b.data[i];" );
+        return ret;
+    }
+
     auto opBinary(string op,string G,E)( in vec!(G,E) b ) const
         if( (op == "+" || op == "-") && isComp!(G,E,S,T) )
     {
