@@ -564,7 +564,7 @@ struct mat(size_t H, size_t W,dtype=float)
         auto length() const { return data.length; }
     }
 
-    /++ +/
+    /++ row & col access +/
     @property auto col(size_t cno)() const
         if( cno >= 0 && cno < W )
     {
@@ -633,16 +633,16 @@ struct mat(size_t H, size_t W,dtype=float)
         return r;
     }
 
-    auto opBinary(string op)( in this b ) const
-        if( op == "+" || op == "-" )
+    auto opBinary(string op,E)( in mat!(H,W,E) b ) const
+        if( ( op == "+" || op == "-" ) && is( E : dtype ) )
     {
         self r = this;
         foreach( i, ref v; r.data ) mixin( "v " ~ op ~ "= b.data[i];" );
         return r;
     }
 
-    auto opOpAssign(string op)( in this b )
-        if( op == "+" || op == "-" )
+    auto opOpAssign(string op,E)( in mat!(H,W,E) b )
+        if( ( op == "+" || op == "-" ) && is( E : dtype ) )
     {
         foreach( i, ref v; data ) mixin( "v " ~ op ~ "= b.data[i];" );
         return this;
@@ -663,8 +663,8 @@ struct mat(size_t H, size_t W,dtype=float)
         return this;
     }
 
-    auto opBinary(string op, size_t M)( in mat!(W,M) b ) const
-        if( op == "*" )
+    auto opBinary(string op, size_t M,E)( in mat!(W,M,E) b ) const
+        if( op == "*" && is( E : dtype ) )
     {
         mat!(H,M) r;
         foreach( i; 0 .. H )
@@ -680,7 +680,7 @@ struct mat(size_t H, size_t W,dtype=float)
     static if( W == H )
     {
         auto opBinary(string op, string S,T)( in vec!(S,T) b ) const
-            if( S.length == W )
+            if( op == "*" && S.length == W )
         {
             vec!(S,T) r;
             foreach( i; 0 .. H )
@@ -693,7 +693,7 @@ struct mat(size_t H, size_t W,dtype=float)
         }
 
         auto opBinaryRight(string op, string S,T)( in vec!(S,T) b ) const
-            if( S.length == W )
+            if( op == "*" && S.length == W )
         {
             vec!(S,T) r;
             foreach( i; 0 .. H )
