@@ -115,6 +115,10 @@ struct vec( string S, T=real )
             val = ext[i];
     }
 
+    this(size_t H, size_t W, E)( in mat!(H,W,E) mtr )
+        if( ( ( W == 1 && H == S.length ) || ( H == 1 && W == S.length ) ) && is( E : T ) )
+    { foreach( i, ref val; data ) val = mtr[i]; }
+
     this(E...)( E ext ) 
         if( E.length == S.length && isAllConv!(T,E) )
     {
@@ -213,6 +217,8 @@ struct vec( string S, T=real )
     @property auto len() const { return sqrt( cast(real)len2 ); }
     static if( is( T == float ) || is( T == double ) || is( T == real ) )
     @property auto e() const { return this / len; }
+
+    @property T[] dup() const { return data.dup; }
 
     // vector mlt
 
@@ -409,12 +415,19 @@ alias vec!("wh",size_t) uisize;
 alias vec!("xy",int) ivec2;
 alias vec!("xy",long) ilvec2;
 
-alias vec!("xy",float) vec2;
-alias vec!("xyz",float) vec3;
+alias vec!("xy",float)   vec2;
+alias vec!("xyz",float)  vec3;
 alias vec!("xyzw",float) vec4;
 alias vec!("ijka",float) quat;
-alias vec!("rgb",float) col3;
+alias vec!("rgb",float)  col3;
 alias vec!("rgba",float) col4;
+
+alias vec!("xy",real)   vec2r;
+alias vec!("xyz",real)  vec3r;
+alias vec!("xyzw",real) vec4r;
+alias vec!("ijka",real) quatr;
+alias vec!("rgb",real)  col3r;
+alias vec!("rgba",real) col4r;
 
 unittest
 {
@@ -550,6 +563,58 @@ struct mat(size_t H, size_t W,dtype=float)
         dtype opIndex( size_t i ) const { return data[i]; }
         auto length() const { return data.length; }
     }
+
+    /++ +/
+    @property auto col(size_t cno)() const
+        if( cno >= 0 && cno < W )
+    {
+        mat!(H,1,dtype) ret;
+        foreach( i; 0 .. H )
+            ret[i] = data[cno+i*W];
+        return ret;
+    }
+
+    @property auto row(size_t cno)() const
+        if( cno >= 0 && cno < H )
+    {
+        mat!(1,W,dtype) ret;
+        foreach( i; 0 .. W )
+            ret[i] = data[cno*W+i];
+        return ret;
+    }
+
+    @property mat!(H,1,E) col(size_t cno,E)( in mat!(H,1,E) mtr )
+        if( cno >= 0 && cno < W && is( E : dtype ) )
+    {
+        foreach( i; 0 .. H )
+            this.opIndex(i,cno) = mtr[i];
+        return mtr;
+    }
+
+    @property mat!(1,W,E) row(size_t cno,E)( in mat!(1,W,E) mtr )
+        if( cno >= 0 && cno < H && is( E : dtype ) )
+    {
+        foreach( i; 0 .. W )
+            this.opIndex(cno,i) = mtr[i];
+        return mtr;
+    }
+
+    @property vec!(S,E) col(size_t cno,string S,E)( in vec!(S,E) v )
+        if( cno >= 0 && cno < W && is( E : dtype ) && S.length == H )
+    {
+        foreach( i; 0 .. H )
+            this.opIndex(i,cno) = v[i];
+        return v;
+    }
+
+    @property vec!(S,E) row(size_t cno,string S,E)( in vec!(S,E) v )
+        if( cno >= 0 && cno < H && is( E : dtype ) && S.length == W )
+    {
+        foreach( i; 0 .. W )
+            this.opIndex(cno,i) = v[i];
+        return v;
+    }
+    /++/
 
     @property auto T() const
     {
@@ -708,6 +773,7 @@ struct mat(size_t H, size_t W,dtype=float)
 alias mat!(2,2) mat2;
 alias mat!(3,3) mat3;
 alias mat!(4,4) mat4;
+
 alias mat!(2,3) mat2x3;
 alias mat!(3,2) mat3x2;
 alias mat!(2,4) mat2x4;
@@ -715,15 +781,30 @@ alias mat!(4,2) mat4x2;
 alias mat!(3,4) mat3x4;
 alias mat!(4,3) mat4x3;
 
+alias mat!(1,2) mat1x2;
+alias mat!(1,3) mat1x3;
+alias mat!(1,4) mat1x4;
+alias mat!(2,1) mat2x1;
+alias mat!(3,1) mat3x1;
+alias mat!(4,1) mat4x1;
+
 alias mat!(2,2,real) mat2r;
 alias mat!(3,3,real) mat3r;
 alias mat!(4,4,real) mat4r;
+
 alias mat!(2,3,real) mat2x3r;
 alias mat!(3,2,real) mat3x2r;
 alias mat!(2,4,real) mat2x4r;
 alias mat!(4,2,real) mat4x2r;
 alias mat!(3,4,real) mat3x4r;
 alias mat!(4,3,real) mat4x3r;
+
+alias mat!(1,2,real) mat1x2r;
+alias mat!(1,3,real) mat1x3r;
+alias mat!(1,4,real) mat1x4r;
+alias mat!(2,1,real) mat2x1r;
+alias mat!(3,1,real) mat3x1r;
+alias mat!(4,1,real) mat4x1r;
 
 
 unittest
@@ -819,4 +900,41 @@ unittest
     auto r2 = m1 * vec4( v1 , 1 );
 
     assert( (r1 - r2.xyz).len < 1e-5 );
+}
+
+unittest
+{
+    auto m = mat3x1( [1,2,3] );
+    auto v = vec3( m );
+    assert( v == vec3( 1,2,3 ) );
+
+    auto m2 = mat3x2( [1,2,
+                       3,4,
+                       5,6] );
+
+    assert( !is( typeof( vec3(m2) ) ) );
+
+    auto v2 = vec3( m2.col!1 );
+    assert( v2 == vec3( 2,4,6 ) );
+
+    m2.col!0 = m2.col!1;
+
+    assert( m2.data == [ 2,2,4,4,6,6 ] );
+
+    auto pos = vec3( 2,4,8 );
+    mat4 mtr;
+    mtr.col!3 = vec4( pos, 1 );
+    assert( mtr.data == [ 1, 0, 0, pos.x,
+                          0, 1, 0, pos.y,
+                          0, 0, 1, pos.z,
+                          0, 0, 0, 1 ] );
+    mtr.row!0 = mtr.col!3 = vec4( pos, 1 );
+    assert( mtr.data == [ pos.x, pos.y, pos.z, 1,
+                          0, 1, 0, pos.y,
+                          0, 0, 1, pos.z,
+                          0, 0, 0, 1 ] );
+    assert( mtr.row!0[1] == pos.y );
+    assert( mtr.col!1[1] == 1 );
+    // why float[] not concatinate with float[2UL] ?
+    assert( vec4( mtr.col!3 ).xyz == vec3( [ 1.0f ] ~ pos.yz.dup ) );
 }
