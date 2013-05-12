@@ -22,22 +22,31 @@ private:
 
     isize winsize;
 
+    SDL_Joystick *joystick;
+
     this()
     {
         DerelictSDL.load();
         DerelictGL.load();
         DerelictGLU.load();
 
-        if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+        if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_JOYSTICK ) < 0 )
             throw new AppException( "Couldn't init SDL: " ~ toDString(SDL_GetError()) );
 
         SDL_EnableUNICODE(1);
+
+        if( SDL_NumJoysticks() > 0 )
+        {
+            SDL_JoystickEventState(SDL_ENABLE);
+            joystick = SDL_JoystickOpen(0);
+            log.info( "enable joy: ", SDL_JoystickName(0) );
+        }
 
         SDL_GL_SetAttribute( SDL_GL_BUFFER_SIZE, 32 );
         SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE,  16 );
         SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
-        setVideoMode( 1200, 800 );
+        setVideoMode( 1400, 800 );
 
         GLVersion ver = DerelictGL.loadClassicVersions(GLVersion.GL21);
         DerelictGL.loadExtensions();
@@ -132,6 +141,33 @@ private:
                                scancode,
                                cast(wchar)symchar, 
                                mod ) );
+    }
+
+    void joystick_eh( in ivec2 mpos, ubyte joy, JoyEvent.Type type, size_t no )
+    {
+        JoyEvent je;
+
+        je.joy = joy;
+        je.type = type;
+        je.no = no;
+
+        foreach( i; 0 .. SDL_JoystickNumAxes( joystick ) )
+            je.axis ~= SDL_JoystickGetAxis( joystick, i ) / 32768.0; 
+
+        foreach( i; 0 .. SDL_JoystickNumBalls( joystick ) )
+        {
+            int[2] d;
+            if( SDL_JoystickGetBall( joystick, i, d.ptr, d.ptr+1 ) )
+                je.balls ~= d;
+        }
+
+        foreach( i; 0 .. SDL_JoystickNumButtons( joystick ) )
+            je.buttons ~= cast(bool)SDL_JoystickGetButton( joystick, i );
+
+        foreach( i; 0 .. SDL_JoystickNumHats( joystick ) )
+            je.hats ~= SDL_JoystickGetHat( joystick, i );
+
+        vh.joystick( mpos, je );
     }
 
     void mouse_button_eh( in ivec2 mpos, ubyte state, uint button ) 
@@ -230,19 +266,32 @@ public:
                     //               event.window.data1, 
                     //               event.window.data2 );
                     //    break;
-                    case SDL_KEYDOWN: goto case;
+                    case SDL_KEYDOWN: 
                     case SDL_KEYUP:
-                        //if( 0 && SDLK_ESCAPE == event.key.keysym.sym )
-                        //{
-                        //    debug log.Debug( "press ESC" );
-                        //    run = false;
-                        //}
-                        //else
                         keyboard_eh( mpos, event.key.state,
                                 event.key.keysym.scancode,
                                 event.key.keysym.unicode,
                                 event.key.keysym.mod );
                         break;
+
+                    case SDL_JOYAXISMOTION: 
+                        joystick_eh( mpos, event.jaxis.which, 
+                                JoyEvent.Type.AXIS, event.jaxis.axis );
+                        break;
+                    case SDL_JOYBUTTONUP: 
+                    case SDL_JOYBUTTONDOWN:
+                        joystick_eh( mpos, event.jbutton.which, 
+                                JoyEvent.Type.BUTTON, event.jbutton.button );
+                        break;
+                    case SDL_JOYBALLMOTION:
+                        joystick_eh( mpos, event.jball.which, 
+                                JoyEvent.Type.BALL, event.jball.ball );
+                        break;
+                    case SDL_JOYHATMOTION:
+                        joystick_eh( mpos, event.jhat.which, 
+                                JoyEvent.Type.HAT, event.jhat.hat );
+                        break;
+
                     case SDL_MOUSEBUTTONDOWN: goto case;
                     case SDL_MOUSEBUTTONUP:
                         mpos.x = event.button.x;
@@ -277,6 +326,11 @@ public:
     ~this() 
     { 
         debug log.Debug( "destruction" );
+        if( SDL_JoystickClose !is null && joystick !is null )
+        {
+            debug log.Debug( "close joystick" );
+            SDL_JoystickClose( joystick );
+        }
         if( vh !is null )
         {
             debug log.Debug( "vh not null" );

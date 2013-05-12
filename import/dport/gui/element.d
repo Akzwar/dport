@@ -172,6 +172,13 @@ public:
                 if( cur ) cur.mouse( localMouse( mpos ), me );
                 });
 
+        joystick.addCondition( (mpos, je){
+                return find( localMouse( mpos ) );
+                }, 0 );
+        joystick.connectAlt( (mpos, je){
+                if( cur ) cur.joystick( localMouse( mpos ), je );
+                });
+
         release.connect( (){ if( cur ) cur.release(); } );
 
         idle.connect( ( dtime ) {
