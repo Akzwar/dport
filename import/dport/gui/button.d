@@ -91,7 +91,7 @@ class ButtonLabel: ButtonDrawContent
     {
         void setRect( in irect r ) { label.reshape( irect( 0, 0, r.w, r.h ) ); }
 
-        void onDraw() { label.draw(); }
+        void onDraw() { /+label.draw();+/ }
         void onIdle( real dtime ){ }
 
         void onActive() { }
