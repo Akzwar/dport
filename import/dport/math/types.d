@@ -160,12 +160,30 @@ struct vec( string S, T=real )
     }
 
     auto elem(string op, string G,E)( in vec!(G,E) b ) const
-        if( (op == "+" || op == "-" || op == "*" || op == "/" ) &&
+        if( (op == "+" || op == "-" || op == "*" || op == "/" || op == "^^" ) &&
                 isComp!(G,E,S,T) )
     {
-        stype ret = stype(this);
+        stype ret;
         foreach( i, ref val; ret.data )
             mixin( "val = data[i] " ~ op ~ " b.data[i];" );
+        return ret;
+    }
+
+    auto elem(string op,E)( E b ) const
+        if( is( E :T ) )
+    {
+        stype ret;
+        foreach( i, ref val; ret.data )
+            mixin( "val = data[i] " ~ op ~ " b;" );
+        return ret;
+    }
+
+    auto fun(alias f,Args...)( Args args ) const
+        if( is( typeof( f(data[0], args) ) : T ) )
+    {
+        stype ret; 
+        foreach( i, ref val; ret.data )
+            val = f( data[i], args );
         return ret;
     }
 
