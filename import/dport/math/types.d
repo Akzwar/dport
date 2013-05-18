@@ -774,17 +774,49 @@ struct mat(size_t H, size_t W,dtype=float)
 
             return self( invt );
         }
+
+        static if( W == 4 )
+        {
+            @property self speed_transform_inv() const
+            {
+                self ret;
+
+                foreach( i; 0 .. 3 )
+                    foreach( j; 0 .. 3 )
+                        ret[i,j] = this[j,i];
+
+
+                auto a22k = 1.0 / this[3,3];
+
+                ret[0,3] = -( ret[0,0] * this[0,3] + ret[0,1] * this[1,3] + ret[0,2] * this[2,3] ) * a22k;
+                ret[1,3] = -( ret[1,0] * this[0,3] + ret[1,1] * this[1,3] + ret[1,2] * this[2,3] ) * a22k;
+                ret[2,3] = -( ret[2,0] * this[0,3] + ret[2,1] * this[1,3] + ret[2,2] * this[2,3] ) * a22k;
+
+                ret[3,0] = -( this[3,0] * ret[0,0] + this[3,1] * ret[1,0] + this[3,2] * ret[2,0] ) * a22k;
+                ret[3,1] = -( this[3,0] * ret[0,1] + this[3,1] * ret[1,1] + this[3,2] * ret[2,1] ) * a22k;
+                ret[3,2] = -( this[3,0] * ret[0,2] + this[3,1] * ret[1,2] + this[3,2] * ret[2,2] ) * a22k;
+                
+                ret[3,3] = a22k * ( 1.0 - ( this[3,0] * ret[0,3] + this[3,1] * ret[1,3] + this[3,2] * ret[2,3] ) );
+
+                return ret;
+            }
+        }
     }
 
-    // TODO: move copy frame
-    auto resize(int dw, int dh)() const
-        if( (dw + W) > 0 && (dh + H) > 0 )
+    auto copy(size_t h, size_t w)( size_t sh=0, size_t sw=0 ) const
     {
-        mat!(dh+H,dw+W) r;
-        foreach( i; 0 .. (H+dh)>H?H:(H+dh) )
-            foreach( j; 0 .. (W+dw)>W?W:(W+dw) )
-                r[i,j] = this[i,j];
-        return r;
+        mat!(h,w,dtype) ret;
+
+        foreach( i; 0 .. h )
+        {
+            foreach( j; 0 .. w )
+            {
+                auto ch = i + sh;
+                auto cw = j + sw;
+                ret[i,j] = ( ch < H && cw < W )?this[ch,cw]:0;
+            }
+        }
+        return ret;
     }
 }
 
@@ -955,4 +987,28 @@ unittest
     assert( mtr.col!1[1] == 1 );
     // why float[] not concatinate with float[2UL] ?
     assert( vec4( mtr.col!3 ).xyz == vec3( [ 1.0f ] ~ pos.yz.dup ) );
+}
+
+unittest
+{
+    mat4 m;
+
+    m[0,0] = 2;
+    m[1,0] = 3;
+
+    auto c = m.copy!(3,3);
+
+    assert( is( typeof(c) == mat3 ) );
+    assert( c.data == [ 2.0f, 0, 0,
+                        3.0,  1, 0,
+                        0,    0, 1 ] );
+
+    auto d = m.copy!(2,3)(0,1);
+    assert( is( typeof(d) == mat2x3 ) );
+    assert( d.data == [ .0f, 0, 0,
+                         1,  0, 0 ] );
+
+    auto e = m.copy!(5,1)();
+    assert( is( typeof(e) == mat!(5,1,float) ) );
+    assert( e.data == [ 2.0f, 3, 0, 0, 0 ] );
 }
