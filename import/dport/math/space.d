@@ -65,8 +65,9 @@ class Resolver
             else break;
 
         foreach( node; cam_branch )
-            if( node ) cam_mtr = cam_mtr * node.self.inv;
+            if( node ) cam_mtr = cam_mtr * node.self.speed_transform_inv;
             else break;
+
         return cam_mtr * obj_mtr;
     }
 }
