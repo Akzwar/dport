@@ -91,7 +91,6 @@ private:
     FT_Library ft;
     FT_Face face;
 
-public:
     /++
         конструктор так то
         Params:
@@ -110,6 +109,23 @@ public:
         if( FT_Select_Charmap( face, FT_Encoding.FT_ENCODING_UNICODE ) )
             throw new DTException( "Couldn't select unicode enc" );
         debug log.info( "unicode encoding selected" );
+    }
+
+    static FreeTypeRender[string] openFTR;
+public:
+
+    /++ 
+        фиксится баг связанный с невозможностью открытия множества экземпляров одного шрифта
+        дополнительная оптимизация
+    +/
+    static FontRender get( string fontname )
+    {
+        if( fontname !in openFTR ) 
+        {
+            openFTR[fontname] = new FreeTypeRender( fontname );
+            debug log.info( "new FreeType font opened: " ~ fontname );
+        }
+        return openFTR[fontname];
     }
 
     override void setSize( uint sz ) { FT_Set_Pixel_Sizes(face, 0, sz); }
@@ -283,7 +299,7 @@ public:
         sp = шейдер, предположительно единый для всего gui-текста
         fontname = имя шрифта
      +/
-    this( Element par, string fontname="LinBiolinum_Rah.ttf" )
+    this( Element par, string fontname )
     {
         super( par );
         this.processEvent = 0;
@@ -299,7 +315,7 @@ public:
         else
         {
             debug log.info( "use FreeType" );
-            fr = new FreeTypeRender( fontname );
+            fr = FreeTypeRender.get( fontname.idup );
         }
 
         draw.addPair( &predraw, (){ tex.use(0); } );
