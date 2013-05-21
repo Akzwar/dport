@@ -76,9 +76,9 @@ public:
 class ButtonLabel: ButtonDrawContent
 {
     TextString label;
-    this( Element parent, wstring text, uint h=14 )
+    this( Element parent, string font, wstring text, uint h=14 )
     {
-        label = new TextString( parent );
+        label = new TextString( parent, font );
         label.setTextParam( TextParam( text, h ), 1 );
     }
 
@@ -159,12 +159,12 @@ class SimpleButton: Button
     ButtonLabel label;
     ButtonShape shape;
 
-    this( Element par, in irect rect, wstring str=""w, void delegate() onclick=null )
+    this( Element par, string font, in irect rect, wstring str=""w, void delegate() onclick=null )
     {
         super( par, rect );
 
         shape = new ButtonShape( this.shader, rect );
-        label = new ButtonLabel( this, str, rect.h - 10 );
+        label = new ButtonLabel( this, font, str, rect.h - 10 );
 
         content ~= shape;
         content ~= label;
