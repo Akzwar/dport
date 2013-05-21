@@ -8,6 +8,28 @@ enum logType { FATAL=0, ERROR=1, WARN=2, UTEST=3, INFO=4, DEBUG=5, EXCEPT=6, TRA
 
 class LogException: Exception { this( string msg ){ super( msg ); } }
 
+class SystemInfo
+{
+    import std.getopt,
+           std.file,
+           std.path,
+           std.string;
+
+    string path;
+
+    this( string[] args )
+    {
+        path = buildNormalizedPath( dirName( absolutePath( args[0] ) ), ".." );
+    }
+
+    string getPath( string file )
+    {
+        return buildNormalizedPath( path, file );
+    }
+}
+
+SystemInfo sysinfo;
+
 private
 {
     struct LogCommand
@@ -123,7 +145,11 @@ class DPortException: Exception
     } 
 }
 
-void setupLogging( string[] args ) { ls.setup( args ); }
+void setupLogging( string[] args ) 
+{ 
+    sysinfo = new SystemInfo( args );
+    ls.setup( args );
+}
 
 private void fnsend(T)( T cmd )
 {

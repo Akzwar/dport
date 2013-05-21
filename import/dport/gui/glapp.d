@@ -214,6 +214,7 @@ public:
         else if( nv is null && singleton.vh is null )
             throw new AppException( "no view in app" );
         debug log.info( "get app" );
+
         return singleton;
     }
 
