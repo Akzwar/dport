@@ -237,6 +237,15 @@ protected:
     /++ рендерит текст, обновляет текстуру и boundingbox (bbox) +/
     void update()
     { 
+        /+ fix redraw buf +/
+        GlyphInfo resbuf;
+        resbuf.rect = irect(0,0,1,1);
+        res.buffer.length = 1;
+        fillTexture( resbuf );
+
+        /+ fix empty str exception +/
+        if( tp.str == "" ) return;
+
         uint th = tp.height;
         fr.setSize( th );
         auto pen = ivec2( 0, 0 );
@@ -253,6 +262,7 @@ protected:
             if( max.x < v.x ) max.x = v.x;
             if( max.y < v.y ) max.y = v.y;
         }
+
 
         foreach( i, ch; tp.str )
         {
