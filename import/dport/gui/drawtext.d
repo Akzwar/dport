@@ -343,3 +343,72 @@ public:
         update();
     }
 }
+
+/++
+ отрисовка текста
+ TODO: дополнить различными рюшечками
+ +/
+class Text: Element
+{
+private:
+    TextString[] strs;
+
+    TextParam tp;
+    bool center;
+    string fontname;
+
+    void update()
+    {
+        auto sp = splitLines( tp.str );
+        while( sp.length > strs.length )
+            strs ~= new TextString( this, fontname );
+
+        strs.length = sp.length;
+
+        int k = 0;
+        foreach( i, s; sp )
+        {
+            auto ptp = tp;
+            ptp.str = s;
+            strs[i].setTextParam( ptp, center );
+            k = cast(int)(i * tp.height * 1.5);
+            strs[i].reshape( irect( 0, k, strs[i].res.rect.w, strs[i].res.rect.h ) );
+        }
+    }
+
+public:
+
+    /++
+        конструктор 
+
+        Params:
+        sp = шейдер, предположительно единый для всего gui-текста
+        fontname = имя шрифта
+     +/
+    this( Element par, string fname )
+    {
+        super( par );
+        this.processEvent = 0;
+
+        version(Windows) 
+        { 
+            debug log.info( "use WINDOWS_WTF" );
+        }
+        else
+        {
+            debug log.info( "use FreeType" );
+            FreeTypeRender.get( fname.idup );
+        }
+
+        fontname = fname;
+    }
+
+    /++ выставляет новые параметры текста +/
+    final void setTextParam( in TextParam ntp, bool align_center=0 )
+    { 
+
+        tp = ntp; 
+        center = align_center;
+        update();
+    }
+}
