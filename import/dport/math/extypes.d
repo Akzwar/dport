@@ -65,21 +65,20 @@ mat4 rotA( float ry, float rz, float rx )
     up = направление вверх
     Returns: матрица трансформации
  +/
-mat4 lookAt( in vec3 cpos, in vec3 target, in vec3 up )
+mat4 lookAt( in vec3 pos, in vec3 to, in vec3 up )
 {
-    auto z = -(target - cpos).e;
+    auto z = (pos-to).e;
     auto x = (up * z).e;
     vec3 y;
-    if( x )
-        y = (z * x).e;
+    if( x ) y = (z * x).e;
     else
     {
         y = (vec3(1,0,0) * z).e;
         x = (y * z).e;
     }
-    return mat4([ x.x, y.x, z.x, cpos.x,
-                  x.y, y.y, z.y, cpos.y,
-                  x.z, y.z, z.z, cpos.z,
+    return mat4([ x.x, y.x, z.x, pos.x,
+                  x.y, y.y, z.y, pos.y,
+                  x.z, y.z, z.z, pos.z,
                     0,   0,   0,       1 ]);
 }
 
