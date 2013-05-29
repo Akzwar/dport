@@ -19,9 +19,9 @@ import dport.math.types;
 interface Node
 {
     /++ матрица трансформации из локальной СК в глобальную (родительские) СК +/
-    abstract @property mat4 self() const;
+    @property mat4 self() const;
     /++ ссылка на родителя +/
-    abstract @property Node parent();
+    @property Node parent();
 }
 
 /++

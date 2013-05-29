@@ -362,8 +362,12 @@ private:
         auto sp = splitLines( tp.str );
         while( sp.length > strs.length )
             strs ~= new TextString( this, fontname );
-
-        strs.length = sp.length;
+        
+        //while( sp.length < strs.length )
+        //{
+        //    clear( strs[$-1] );
+        //    strs = strs[0 .. $-1];
+        //}
 
         int k = 0;
         foreach( i, s; sp )

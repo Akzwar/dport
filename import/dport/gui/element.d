@@ -117,7 +117,7 @@ protected:
     {
         foreach_reverse( v; childs )
         {
-            if( v.processEvent && v.visible && ( mpos in v.rect ) )
+            if( v !is null && v.processEvent && v.visible && ( mpos in v.rect ) )
             {
                 if( cur != v ) 
                 {
@@ -184,5 +184,19 @@ public:
         idle.connect( ( dtime ) {
             foreach( ch; childs ) ch.idle( dtime );
                 });
+    }
+
+    ~this()
+    {
+        //if( parent )
+        //{
+        //    foreach( i, ch; parent.childs )
+        //        if( ch == this )
+        //        {
+        //            debug log.error( "OKDA" );
+        //            parent.childs = parent.childs[0 .. i] ~ ( i < parent.childs.length ?
+        //                                                parent.childs[i+1 .. $]:[] );
+        //        }
+        //}
     }
 }
