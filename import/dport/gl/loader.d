@@ -28,7 +28,7 @@ struct Scene
 Scene colladaLoader( string fname )
 {
     string s, buf;
-    auto f = File(fname,"r");
+    auto f = File( fname,"r" );
     while( f.readln( buf ) )
         s ~= buf;
     f.close();
@@ -48,7 +48,7 @@ Scene colladaParser( string xmlsrc )
         Model model;
         xml.onStartTag["mesh"] = ( ElementParser xml )
         {
-            Source[string] msrc;
+            Source[string] model_src;
             xml.onStartTag["source"] = ( ElementParser xml )
             {
                 string nn = xml.tag.attr["id"];
@@ -71,13 +71,13 @@ Scene colladaParser( string xmlsrc )
                     xml.parse();
                 };
                 xml.parse();
-                msrc[nn] = src;
+                model_src[nn] = src;
             };
             xml.onStartTag["vertices"] = ( ElementParser xml )
             {
                 string id = xml.tag.attr["id"];
                 xml.onStartTag["input"] = ( ElementParser xml )
-                { msrc[id] = msrc[xml.tag.attr["source"][1 .. $]]; };
+                { model_src[id] = model_src[xml.tag.attr["source"][1 .. $]]; };
                 xml.parse();
             };
             struct pinput
@@ -122,14 +122,14 @@ Scene colladaParser( string xmlsrc )
             xml.parse();
 
             foreach( input; pi )
-                model.src[input.sem] = Source( [], msrc[input.src].apn );
+                model.src[input.sem] = Source( [], model_src[input.src].apn );
 
             for( size_t i=0; i < pp.length; i+=pi.length )
                 foreach( inp; pi )
                 {
-                    size_t ds = msrc[inp.src].apn.length;
+                    size_t ds = model_src[inp.src].apn.length;
                     foreach( ic; 0 .. ds )
-                        model.src[inp.sem].data ~= msrc[inp.src].data[ pp[i+inp.offset]*ds + ic ];
+                        model.src[inp.sem].data ~= model_src[inp.src].data[ pp[i+inp.offset]*ds + ic ];
                 }
         };
         xml.parse();

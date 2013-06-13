@@ -1,4 +1,4 @@
-module dport.gui.glapp;
+module dport.gui.glsdlapp;
 
 import derelict.sdl.sdl;
 import derelict.opengl.gl;
@@ -10,12 +10,12 @@ import std.datetime;
 import dport.gui.base;
 import dport.utils.logsys;
 
-mixin( defaultModuleLogUtils("AppException") );
+mixin( defaultModuleLogUtils("GLSDLAppException") );
 
-final class GLApp
+final class GLSDLApp
 {
 private:
-    static GLApp singleton;
+    static GLSDLApp singleton;
 
     View vh;
     StopWatch sw;
@@ -24,22 +24,22 @@ private:
 
     SDL_Joystick *joystick;
 
-    this()
+    this( string[] args )
     {
         DerelictSDL.load();
         DerelictGL.load();
         DerelictGLU.load();
 
         if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_JOYSTICK ) < 0 )
-            throw new AppException( "Couldn't init SDL: " ~ toDString(SDL_GetError()) );
+            throw new GLSDLAppException( "Couldn't init SDL: " ~ toDString(SDL_GetError()) );
 
         SDL_EnableUNICODE(1);
 
         if( SDL_NumJoysticks() > 0 )
         {
-            SDL_JoystickEventState(SDL_ENABLE);
+            SDL_JoystickEventState( SDL_ENABLE );
             joystick = SDL_JoystickOpen(0);
-            log.info( "enable joy: ", SDL_JoystickName(0) );
+            debug log.info( "enable joy: ", SDL_JoystickName(0) );
         }
 
         SDL_GL_SetAttribute( SDL_GL_BUFFER_SIZE, 32 );
@@ -213,15 +213,18 @@ private:
                 MouseEvent( MouseEvent.Type.MOTION, state ) );
     }
 
-    static this() { singleton = new GLApp(); }
-
 public:
-    static auto getApp( View nv )
+    static auto getApp( View nv, string[] args )
     {
+        if( singleton !is null )
+        clear( singleton );
+
+        singleton = new GLSDLApp( args );
+
         if( nv !is null )
             singleton.setView( nv );
         else if( nv is null && singleton.vh is null )
-            throw new AppException( "no view in app" );
+            throw new GLSDLAppException( "no view in app" );
         debug log.info( "get app" );
 
         return singleton;
@@ -244,7 +247,7 @@ public:
         winsize.w = w;
         winsize.h = h;
         if( SDL_SetVideoMode( w, h, 0, SDL_OPENGL ) == null )
-            throw new AppException( "Failed to set video mode: " ~ toDString(SDL_GetError()) );
+            throw new GLSDLAppException( "Failed to set video mode: " ~ toDString(SDL_GetError()) );
 
         if( vh !is null )
         {

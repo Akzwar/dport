@@ -18,14 +18,10 @@ class SystemInfo
     string path;
 
     this( string[] args )
-    {
-        path = buildNormalizedPath( dirName( absolutePath( args[0] ) ), ".." );
-    }
+    { path = buildNormalizedPath( dirName( absolutePath( args[0] ) ), "." ); }
 
-    string getPath( string file )
-    {
-        return buildNormalizedPath( path, file );
-    }
+    string getPath( string file ) const
+    { return buildNormalizedPath( path, file ); }
 }
 
 SystemInfo sysinfo;
