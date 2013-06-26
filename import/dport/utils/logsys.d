@@ -194,15 +194,13 @@ string defaultModuleLogUtils(string ExceptName)
     return r"
     private {
         import std.traits;
-        debug {
-            Logger logger;
-            Logger log() 
-            { 
-                if( !logger ) 
-                    logger = new Logger( moduleName!logger, logType.TRACE ); 
-                return logger;
-            }
-        } 
+        Logger logger;
+        Logger log() 
+        { 
+            if( !logger ) 
+                logger = new Logger( moduleName!logger, logType.TRACE ); 
+            return logger;
+        }
     }
 
     class " ~ ExceptName ~ r": DPortException
