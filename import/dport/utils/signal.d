@@ -88,10 +88,7 @@ struct SignalBox(Args...)
     }
 
     /++ тип контента +/
-    struct cntnttype
-    {
-        void delegate(Args) fun;
-    }
+    struct cntnttype { void delegate(Args) fun; }
 
     pairtype[] pairs;
     cntnttype[] content;
