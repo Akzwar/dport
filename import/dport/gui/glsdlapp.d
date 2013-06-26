@@ -12,6 +12,13 @@ import dport.utils.logsys;
 
 mixin( defaultModuleLogUtils("GLSDLAppException") );
 
+static this()
+{
+    DerelictSDL.load();
+    DerelictGL.load();
+    DerelictGLU.load();
+}
+
 final class GLSDLApp
 {
 private:
@@ -26,10 +33,6 @@ private:
 
     this( string[] args )
     {
-        DerelictSDL.load();
-        DerelictGL.load();
-        DerelictGLU.load();
-
         if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_JOYSTICK ) < 0 )
             throw new GLSDLAppException( "Couldn't init SDL: " ~ toDString(SDL_GetError()) );
 
@@ -214,18 +217,11 @@ private:
     }
 
 public:
-    static auto getApp( View nv, string[] args )
+    static auto getApp( string[] args )
     {
-        if( singleton !is null )
-        clear( singleton );
+        if( singleton !is null ) clear( singleton );
 
         singleton = new GLSDLApp( args );
-
-        if( nv !is null )
-            singleton.setView( nv );
-        else if( nv is null && singleton.vh is null )
-            throw new GLSDLAppException( "no view in app" );
-        debug log.info( "get app" );
 
         return singleton;
     }
