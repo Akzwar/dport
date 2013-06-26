@@ -233,10 +233,10 @@ public:
         use();
         static if( w == h )
             mixin( "glUniformMatrix" ~ to!string(w) ~ 
-                    "fv( loc, 1, GL_TRUE, mtr.data ); " );
+                    "fv( loc, 1, GL_TRUE, mtr.data.ptr ); " );
         else
             mixin( "glUniformMatrix" ~ to!string(h) ~ "x" ~ to!string(w) ~
-                    "fv( loc, 1, GL_TRUE, mtr.data ); " );
+                    "fv( loc, 1, GL_TRUE, mtr.data.ptr ); " );
     }
     void setUniformMat(size_t h, size_t w)( string name, in mat!(h,w) mtr )
         if( h <= 4 && w <= 4 )
