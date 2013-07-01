@@ -1,7 +1,7 @@
 module dport.gl.shader;
 
 import dport.math.types;
-import dport.utils.logsys;
+import dport.utils.system;
 
 import std.conv, std.string;
 import derelict.opengl3.gl3;
@@ -99,6 +99,7 @@ private:
 public:
     this( in ShaderSources src )
     {
+        debug log.info( "shader ctor start" );
         if( src.vert.length == 0 || src.frag.length == 0 )
             throw new ShaderException( "source is empty" );
 

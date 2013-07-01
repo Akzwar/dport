@@ -1,7 +1,7 @@
 module dport.gl.loader;
 
 //import dport.math.types;
-import dport.utils.logsys;
+import dport.utils.system;
 
 private import std.stdio, std.xml, std.conv, std.string;
 

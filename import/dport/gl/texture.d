@@ -7,7 +7,7 @@ import derelict.opengl3.ext;
 
 import dport.math.types;
 import dport.gl.shader;
-import dport.utils.logsys;
+import dport.utils.system;
 
 mixin( defaultModuleLogUtils("TexException") );
 

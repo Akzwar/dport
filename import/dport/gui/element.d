@@ -7,7 +7,7 @@ import dport.gl.shader,
 
 public import dport.gui.base;
 
-import dport.utils.logsys;
+import dport.utils.system;
 mixin( defaultModuleLogUtils("ElemException") );
 
 import std.conv;
@@ -31,14 +31,15 @@ import std.conv;
 enum ShaderSources SS_ELEMENT = 
 {
 r"
+#version 130
 uniform vec2 winsize;
 
-attribute vec2 vertex;
-attribute vec4 color;
-attribute vec2 uv;
+in vec2 vertex;
+in vec4 color;
+in vec2 uv;
 
-varying vec2 ex_uv;
-varying vec4 ex_color;
+out vec2 ex_uv;
+out vec4 ex_color;
 
 void main(void)
 {
@@ -49,11 +50,12 @@ void main(void)
 ", 
 
 r"
+#version 130
 uniform sampler2D ttu;
 uniform int use_texture;
 
-varying vec2 ex_uv;
-varying vec4 ex_color;
+in vec2 ex_uv;
+in vec4 ex_color;
 
 void main(void) 
 { 

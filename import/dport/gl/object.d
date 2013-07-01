@@ -4,7 +4,7 @@ import derelict.opengl3.gl;
 import derelict.opengl3.ext;
 
 import dport.math.types;
-import dport.utils.logsys;
+import dport.utils.system;
 import dport.utils.signal;
 
 import dport.gl.shader;

@@ -7,20 +7,22 @@ import std.datetime;
 import std.getopt;
 
 import dport.gui.base;
-import dport.utils.logsys;
+import dport.utils.system;
 
 mixin( defaultModuleLogUtils("GLSDLAppException") );
 
-static this()
+version(Windows){}
+else
 {
-    DerelictSDL2.load();
-    DerelictGL3.load();
+    pragma( lib, "X11" );
+    extern(C) int XInitThreads();
 }
 
-string toDString( const char* c_str )
+
+string toDString( const(char*) c_str )
 {
     string buf;
-    const char * ch = c_str;
+    char *ch = cast(char*)c_str;
     while( *ch != '\0' )
         buf ~= *(ch++);
     return buf;
@@ -47,7 +49,8 @@ private:
         string joy_name = "";
         bool audioinit = false;
         bool resizable = true;
-        ivec2 glver = ivec2( 3, 3 );
+        string title = "work";
+        ivec2 glver = ivec2( 3, 1 );
 
         // TODO: parse args 
 
@@ -88,8 +91,8 @@ private:
         SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
         window = SDL_CreateWindow( title.ptr,
-                                   SDL_WINDOWPOS_CENTRED,
-                                   SDL_WINDOWPOS_CENTRED,
+                                   SDL_WINDOWPOS_CENTERED,
+                                   SDL_WINDOWPOS_CENTERED,
                                    winsize.w, winsize.h,
                                    SDL_WINDOW_OPENGL | 
                                    SDL_WINDOW_SHOWN | 
@@ -98,6 +101,10 @@ private:
             throw new GLSDLAppException( "Couldn't create SDL window: " ~ toDString(SDL_GetError()) );
 
         context = SDL_GL_CreateContext( window );
+
+        DerelictGL3.reload();
+        debug log.info( "loaded gl", DerelictGL3.loadedVersion ); 
+
         SDL_GL_SetSwapInterval(1);
 
         glClearColor( .0f, .0f, .0f, .0f );
@@ -139,9 +146,9 @@ private:
         case SDL_WINDOWEVENT_EXPOSED: break;
         case SDL_WINDOWEVENT_MOVED: break;
         case SDL_WINDOWEVENT_RESIZED:
-            winsize.x = cast(uint)data1;
-            winsize.y = cast(uint)data2;
-            vh.reshape( winsize );
+            winsize.w = cast(uint)data1;
+            winsize.h = cast(uint)data2;
+            vh.reshape( irect( ivec2(0,0), winsize ) );
             glViewport( 0, 0, cast(int)data1, cast(int)data2 );
             break;
         case SDL_WINDOWEVENT_MINIMIZED: break;
@@ -156,7 +163,7 @@ private:
         }
     }
 
-    void keyboard_eh( in ivec2 mpos, ubyte state, ubyte scancode, ulong symchar, int mod ) 
+    void keyboard_eh( in ivec2 mpos, ubyte state, int scancode, ulong symchar, ushort mod ) 
     { 
         /*
          * SDL mod description
@@ -186,7 +193,7 @@ private:
                                mod ) );
     }
 
-    void joystick_eh( in ivec2 mpos, ubyte joy, JoyEvent.Type type, size_t no )
+    void joystick_eh( in ivec2 mpos, uint joy, JoyEvent.Type type, size_t no )
     {
         JoyEvent je;
 
@@ -248,6 +255,17 @@ private:
     }
 
 public:
+    static void loadLibs()
+    {
+        //version(Windows) {} 
+        //else {
+        //    XInitThreads();
+        //}
+        DerelictSDL2.load();
+        DerelictGL3.load();
+        debug log.info( "loaded gl", DerelictGL3.loadedVersion ); 
+    }
+
     static auto getApp( string[] args )
     {
         if( singleton !is null ) clear( singleton );

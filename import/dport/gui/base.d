@@ -41,7 +41,7 @@ struct MouseEvent
 struct JoyEvent
 {
     /++ номер джостика +/
-    ubyte joy;
+    uint joy;
 
     /++ тип события +/
     enum Type { AXIS, BUTTON, BALL, HAT };

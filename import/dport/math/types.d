@@ -15,11 +15,10 @@ else alias int size_s;
 
 // CT_ - compile time assertion
 
-private static pure size_t CT_getIndex( string str, string m )
+private static pure size_s CT_getIndex( string str, string m )
 {
     foreach( i, v; str ) if( m[0] == v ) return i;
-    assert( 0, "[Types]: string \"" ~ str ~ 
-            "\" does not contain symbol: \"" ~ m ~ "\"" );
+    return -1;
 }
 
 private static pure bool CT_onlyTrueChars( string str )
@@ -31,8 +30,8 @@ private static pure bool CT_onlyTrueChars( string str )
             case 'A': .. case 'Z': 
                 break;
             default: 
-                assert( 0, "[Types]: string \"" ~ str ~ 
-                        "\" contain bad symbol: \"" ~ v ~ "\"" );
+                assert( 0, "[ [Types]: string '" ~ str ~ 
+                        "' contain bad symbol: '" ~ v ~ "' ] " );
         }
     return true;
 }
@@ -52,7 +51,7 @@ private static pure bool CT_checkInexAll( string S, string v )
 {
     CT_trueString(v);
     foreach( ch; v )
-        CT_getIndex( S, ""~ch );
+        if( CT_getIndex( S, ""~ch ) < 0 ) return false;
     return true;
 }
 

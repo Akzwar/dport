@@ -6,7 +6,7 @@ module dport.gui.drawtext;
 import derelict.opengl3.gl3;
 
 import dport.math.types;
-import dport.utils.logsys;
+import dport.utils.system;
 
 import dport.gl.shader;
 import dport.gl.object;
@@ -78,7 +78,7 @@ public:
 } else {
 
 import derelict.freetype.ft;
-import derelict.freetype.fttypes;
+import derelict.freetype.types;
 
 static this() { DerelictFT.load(); }
 

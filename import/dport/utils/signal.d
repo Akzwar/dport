@@ -2,7 +2,7 @@
 module dport.utils.signal;
 
 import std.conv;
-import dport.utils.logsys;
+import dport.utils.system;
 
 mixin( defaultModuleLogUtils( "SignalException" ) );
 
