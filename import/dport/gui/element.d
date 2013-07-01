@@ -1,6 +1,6 @@
 module dport.gui.element;
 
-import derelict.opengl.gl;
+import derelict.opengl3.gl3;
 
 import dport.gl.shader,
        dport.gl.object;

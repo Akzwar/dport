@@ -1,11 +1,10 @@
 module dport.gui.glsdlapp;
 
-import derelict.sdl.sdl;
-import derelict.opengl.gl;
-import derelict.opengl.glu;
-import derelict.util.compat;
+import derelict.sdl2.sdl;
+import derelict.opengl3.gl3;
 
 import std.datetime;
+import std.getopt;
 
 import dport.gui.base;
 import dport.utils.logsys;
@@ -14,9 +13,17 @@ mixin( defaultModuleLogUtils("GLSDLAppException") );
 
 static this()
 {
-    DerelictSDL.load();
-    DerelictGL.load();
-    DerelictGLU.load();
+    DerelictSDL2.load();
+    DerelictGL3.load();
+}
+
+string toDString( const char* c_str )
+{
+    string buf;
+    const char * ch = c_str;
+    while( *ch != '\0' )
+        buf ~= *(ch++);
+    return buf;
 }
 
 final class GLSDLApp
@@ -25,34 +32,73 @@ private:
     static GLSDLApp singleton;
 
     View vh;
+
+    SDL_Window *window = null;
+    SDL_GLContext context;
+
     StopWatch sw;
 
-    isize winsize;
+    isize winsize = isize( 1200, 800 );
 
-    SDL_Joystick *joystick;
+    SDL_Joystick *joystick = null;
 
     this( string[] args )
     {
-        if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_JOYSTICK ) < 0 )
+        string joy_name = "";
+        bool audioinit = false;
+        bool resizable = true;
+        ivec2 glver = ivec2( 3, 3 );
+
+        // TODO: parse args 
+
+        auto sdlinitflags = SDL_INIT_VIDEO | 
+            ( joy_name.length ? SDL_INIT_JOYSTICK : 0 ) | 
+            ( audioinit ? SDL_INIT_AUDIO : 0 );
+
+        if( SDL_Init( sdlinitflags ) < 0 )
             throw new GLSDLAppException( "Couldn't init SDL: " ~ toDString(SDL_GetError()) );
 
-        SDL_EnableUNICODE(1);
+        //SDL_EnableUNICODE(1);
 
-        if( SDL_NumJoysticks() > 0 )
+        int num_joys = SDL_NumJoysticks();
+        if( num_joys > 0 && joy_name.length )
         {
             SDL_JoystickEventState( SDL_ENABLE );
-            joystick = SDL_JoystickOpen(0);
-            debug log.info( "enable joy: ", SDL_JoystickName(0) );
+            int dev_index = 0;
+            if( num_joys != 1 || joy_name != "any" )
+                while( joy_name != toDString( SDL_JoystickNameForIndex( dev_index ) ) )
+                {
+                    dev_index++;
+                    if( dev_index > num_joys )
+                    {
+                        dev_index = 0;
+                        break;
+                    }
+                }
+
+            joystick = SDL_JoystickOpen( dev_index );
+            debug log.info( "enable joy: ", SDL_JoystickName(joystick) );
         }
 
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, glver.x );
+        SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, glver.y );
+
         SDL_GL_SetAttribute( SDL_GL_BUFFER_SIZE, 32 );
-        SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE,  16 );
+        SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE,  24 );
         SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
-        setVideoMode( 1400, 800 );
+        window = SDL_CreateWindow( title.ptr,
+                                   SDL_WINDOWPOS_CENTRED,
+                                   SDL_WINDOWPOS_CENTRED,
+                                   winsize.w, winsize.h,
+                                   SDL_WINDOW_OPENGL | 
+                                   SDL_WINDOW_SHOWN | 
+                                   ( resizable ? SDL_WINDOW_RESIZABLE : 0 ) );
+        if( window is null )
+            throw new GLSDLAppException( "Couldn't create SDL window: " ~ toDString(SDL_GetError()) );
 
-        GLVersion ver = DerelictGL.loadClassicVersions(GLVersion.GL21);
-        DerelictGL.loadExtensions();
+        context = SDL_GL_CreateContext( window );
+        SDL_GL_SetSwapInterval(1);
 
         glClearColor( .0f, .0f, .0f, .0f );
         glEnable( GL_BLEND );
@@ -84,46 +130,31 @@ private:
         vh.draw();
     }
 
-    /+
     void window_eh( ubyte event, long data1, long data2 )
     {
         switch( event ) 
         {
-        case SDL_WINDOWEVENT_SHOWN:
-            break;
-        case SDL_WINDOWEVENT_HIDDEN:
-            break;
-        case SDL_WINDOWEVENT_EXPOSED:
-            break;
-        case SDL_WINDOWEVENT_MOVED:
-            break;
+        case SDL_WINDOWEVENT_SHOWN: break;
+        case SDL_WINDOWEVENT_HIDDEN: break;
+        case SDL_WINDOWEVENT_EXPOSED: break;
+        case SDL_WINDOWEVENT_MOVED: break;
         case SDL_WINDOWEVENT_RESIZED:
             winsize.x = cast(uint)data1;
             winsize.y = cast(uint)data2;
             vh.reshape( winsize );
             glViewport( 0, 0, cast(int)data1, cast(int)data2 );
             break;
-        case SDL_WINDOWEVENT_MINIMIZED:
-            break;
-        case SDL_WINDOWEVENT_MAXIMIZED:
-            break;
-        case SDL_WINDOWEVENT_RESTORED:
-            break;
-        case SDL_WINDOWEVENT_ENTER:
-            break;
-        case SDL_WINDOWEVENT_LEAVE:
-            break;
-        case SDL_WINDOWEVENT_FOCUS_GAINED:
-            break;
-        case SDL_WINDOWEVENT_FOCUS_LOST:
-            break;
-        case SDL_WINDOWEVENT_CLOSE:
-            break;
-        default:
-            break;
+        case SDL_WINDOWEVENT_MINIMIZED: break;
+        case SDL_WINDOWEVENT_MAXIMIZED: break;
+        case SDL_WINDOWEVENT_RESTORED: break;
+        case SDL_WINDOWEVENT_ENTER: break;
+        case SDL_WINDOWEVENT_LEAVE: break;
+        case SDL_WINDOWEVENT_FOCUS_GAINED: break;
+        case SDL_WINDOWEVENT_FOCUS_LOST: break;
+        case SDL_WINDOWEVENT_CLOSE: break;
+        default: break;
         }
     }
-    +/
 
     void keyboard_eh( in ivec2 mpos, ubyte state, ubyte scancode, ulong symchar, int mod ) 
     { 
@@ -237,20 +268,20 @@ public:
         debug log.Debug( "set view: ", vh.rect._rect );
     }
 
-    void setVideoMode( uint w, uint h )
-    {
-        debug log.Debug( "set size: (", w, ", ", h, ")" );
-        winsize.w = w;
-        winsize.h = h;
-        if( SDL_SetVideoMode( w, h, 0, SDL_OPENGL ) == null )
-            throw new GLSDLAppException( "Failed to set video mode: " ~ toDString(SDL_GetError()) );
+    //void setVideoMode( uint w, uint h )
+    //{
+    //    debug log.Debug( "set size: (", w, ", ", h, ")" );
+    //    winsize.w = w;
+    //    winsize.h = h;
+    //    if( SDL_SetVideoMode( w, h, 0, SDL_OPENGL ) == null )
+    //        throw new GLSDLAppException( "Failed to set video mode: " ~ toDString(SDL_GetError()) );
 
-        if( vh !is null )
-        {
-            glViewport( 0, 0, winsize.w, winsize.h );
-            vh.rect = irect( 0, 0, w, h );
-        }
-    }
+    //    if( vh !is null )
+    //    {
+    //        glViewport( 0, 0, winsize.w, winsize.h );
+    //        vh.rect = irect( 0, 0, w, h );
+    //    }
+    //}
 
     void mainLoop()
     {
@@ -270,11 +301,11 @@ public:
                         run = false; 
                         debug log.Debug( "SDL_QUIT" );
                         break;
-                    //case SDL_WINDOWEVENT:
-                    //    window_eh( event.window.event, 
-                    //               event.window.data1, 
-                    //               event.window.data2 );
-                    //    break;
+                    case SDL_WINDOWEVENT:
+                        window_eh( event.window.event, 
+                                   event.window.data1, 
+                                   event.window.data2 );
+                        break;
                     case SDL_KEYDOWN: 
                     case SDL_KEYUP:
                         keyboard_eh( mpos, event.key.state,
@@ -326,7 +357,7 @@ public:
 
             idle();
             draw();
-            SDL_GL_SwapBuffers();
+            SDL_GL_SwapWindow( window );
             SDL_Delay(1);
         }
         debug log.Debug( "exit mainLoop" );
@@ -335,6 +366,12 @@ public:
     ~this() 
     { 
         debug log.Debug( "destruction" );
+
+        if( context !is null )
+            SDL_GL_DeleteContext( context );
+        if( window !is null )
+            SDL_DestroyWindow( window );
+
         if( SDL_JoystickClose !is null && joystick !is null )
         {
             debug log.Debug( "close joystick" );

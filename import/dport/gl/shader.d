@@ -4,7 +4,7 @@ import dport.math.types;
 import dport.utils.logsys;
 
 import std.conv, std.string;
-import derelict.opengl.gl;
+import derelict.opengl3.gl3;
 
 mixin( defaultModuleLogUtils("ShaderException") );
 
@@ -32,7 +32,7 @@ private:
     {
         debug log.Debug( "makeShader start" );
         GLuint shader = glCreateShader( type );
-        auto srcptr = src.ptr;//src.toStringz;
+        auto srcptr = src.ptr;
         glShaderSource( shader, 1, &srcptr, null );
         glCompileShader( shader );
 
@@ -202,28 +202,6 @@ public:
     void setUniformVec(string S,T)( string name, vec!(S,T)[] vals... )
         if( S.length > 0 && S.length <= 4 && ( is( T == float ) || is( T == int ) || is( T == uint ) ) )
     { setUniformVec( getUniformLocation( name ), vals ); }
-
-    void setUniformMat(uint k=4, uint m=0)( int loc, uint cnt, float[] vals, bool tr=true )
-        if( k >= 2 && k <= 4 && m <= 4 )
-    {
-        debug log.trace( "setUniformMat from loc ", loc, " with data ", vals );
-        checkLoc( loc );
-        auto sz = k * ( m > 0 ? m : k );
-        if( sz * cnt != vals.length )
-            throw new ShaderException( "bad vals length: " 
-                    ~ to!string(vals.length) ~ ", must be: " ~ to!string( sz*cnt ) );
-        use();
-        static if( k == m || m == 0 )
-            mixin( "glUniformMatrix" ~ to!string(k) ~ 
-                    "fv( loc, cnt, tr, vals.ptr ); " );
-        else
-            mixin( "glUniformMatrix" ~ to!string(k) ~ "x" ~ to!string(m) ~
-                    "fv( loc, cnt, tr, vals.ptr ); " );
-    }
-
-    void setUniformMat(uint k=4, uint m=0)( string name, uint cnt, float[] vals, bool tr=true )
-        if( k >= 2 && k <= 4 && m <= 4 )
-    { setUniformMat!(k,m)( getUniformLocation( name ), cnt, vals, tr ); }
 
     void setUniformMat(size_t h, size_t w)( int loc, in mat!(h,w) mtr )
         if( h <= 4 && w <= 4 )

@@ -2,8 +2,8 @@ module dport.gl.texture;
 
 import std.conv;
 
-import derelict.opengl.gl;
-import derelict.opengl.glext;
+import derelict.opengl3.gl3;
+import derelict.opengl3.ext;
 
 import dport.math.types;
 import dport.gl.shader;

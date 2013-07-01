@@ -1,7 +1,7 @@
 module dport.gl.object;
 
-import derelict.opengl.gl;
-import derelict.opengl.glext;
+import derelict.opengl3.gl;
+import derelict.opengl3.ext;
 
 import dport.math.types;
 import dport.utils.logsys;
@@ -88,7 +88,6 @@ protected:
         bufferData( name, data, mem );
     }
 
-    // TODO: test with out enabling attribs (only setting to use vao)
     final void predraw_hook_base()
     {
         debug log.trace( "predraw start" );

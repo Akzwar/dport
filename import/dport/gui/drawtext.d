@@ -3,7 +3,7 @@
  +/
 module dport.gui.drawtext;
 
-import derelict.opengl.gl;
+import derelict.opengl3.gl3;
 
 import dport.math.types;
 import dport.utils.logsys;
