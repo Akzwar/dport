@@ -11,14 +11,6 @@ import dport.utils.system;
 
 mixin( defaultModuleLogUtils("GLSDLAppException") );
 
-version(Windows){}
-else
-{
-    pragma( lib, "X11" );
-    extern(C) int XInitThreads();
-}
-
-
 string toDString( const(char*) c_str )
 {
     string buf;
@@ -257,10 +249,6 @@ private:
 public:
     static void loadLibs()
     {
-        //version(Windows) {} 
-        //else {
-        //    XInitThreads();
-        //}
         DerelictSDL2.load();
         DerelictGL3.load();
         debug log.info( "loaded gl", DerelictGL3.loadedVersion ); 
