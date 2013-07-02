@@ -105,8 +105,7 @@ class ButtonLabel: ButtonDrawContent
 class ButtonShape: GLVAO, ButtonDrawContent
 {
     static float[] posdata( in irect r )
-    { return [ 0.0f, 0, 0, r.h, r.w, r.h, r.w, 0 ]; }
-    //{ return [ r.x*1.0f, r.y, r.x, r.y+r.h, r.x+r.w, r.y+r.h, r.x+r.w, r.y ]; }
+    { return [ 0.0f, 0, 0, r.h, r.w, 0, r.w, r.h ]; }
 
     static float[] coldata( in col4 c )
     { return c.data ~ c.data ~ c.data ~ c.data; }
@@ -130,7 +129,7 @@ class ButtonShape: GLVAO, ButtonDrawContent
         lastColor = not_active_col;
         setAttribPointer( "col", "color", 4, GL_FLOAT );
 
-        draw.connect( (){ glDrawArrays( GL_QUADS, 0, 4 ); } );
+        draw.connect( (){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
     }
 
     override // ButtonDrawContent
