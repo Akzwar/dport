@@ -1,5 +1,7 @@
+module dport.math.randn;
+
 import std.math;
-import std.random;
+public import std.random;
 
 double normal( double mu=0.0, double sigma=1.0 )
 {
