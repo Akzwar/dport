@@ -819,6 +819,27 @@ struct mat(size_t H, size_t W,dtype=float)
     }
 }
 
+template col( size_t H, mtype = float ){ alias mat!(H,1,mtype) col; }
+template row( size_t W, mtype = float ){ alias mat!(1,W,mtype) row; }
+
+unittest
+{
+    auto r = row!3( [ 3, 2, 1 ] );
+    auto c = col!3( [ 1, 2, 3 ] );
+
+    assert( (r * c)[0] == 10 );
+    assert( (col!3).sizeof == float.sizeof * 3 );
+    assert( (col!7).sizeof == float.sizeof * 7 );
+
+    col!3[] arr = [ c ];
+
+    float *p = cast(float*)arr.ptr;
+
+    assert( *(p+0) == 1 );
+    assert( *(p+1) == 2 );
+    assert( *(p+2) == 3 );
+}
+
 alias mat!(2,2) mat2;
 alias mat!(3,3) mat3;
 alias mat!(4,4) mat4;
