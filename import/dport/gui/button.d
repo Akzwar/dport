@@ -67,7 +67,7 @@ public:
         bbox = rect;
         mouse.connect( &mouse_hook );
         reshape.connect( (r){ foreach( elem; content ) elem.setRect( r ); });
-        draw.connect( (){ foreach( elem; content ) elem.onDraw(); });
+        draw.connect( (){ foreach( elem; content ) elem.onDraw(); } );
         idle.connect( (dtime){ foreach( elem; content ) elem.onIdle(dtime); }); 
         release.connect( (){ prepare = 0; } );
     }
@@ -129,14 +129,14 @@ class ButtonShape: GLVAO, ButtonDrawContent
         lastColor = not_active_col;
         setAttribPointer( "col", "color", 4, GL_FLOAT );
 
-        draw.connect( (){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
+        draw.connect( (mtr){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
     }
 
     override // ButtonDrawContent
     {
         void setRect( in irect r ) { bufferData( "pos", posdata( r ) ); }
 
-        void onDraw() { draw(); }
+        void onDraw() { draw( mat4() ); }
 
         void onIdle( real dtime ) 
         { 

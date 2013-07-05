@@ -34,7 +34,12 @@ protected:
             super( sp ); 
             genBufferWithData( "vert", [ -1.0f, -1, 1, -1, -1,  1, 1,  1, ] );
             setAttribPointer( "vert", v_coord_name, 2, GL_FLOAT );
-            draw.connect( (){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
+            draw.connect( (mtr){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
+            draw.addOpen( (mtr){ 
+                            fx.setUniform!int( uniform_fbo, GL_TEXTURE0 );
+                            tex.use(); scope(exit) tex.use(0);
+                            fx.setUniformVec( tex_res, vec2( 2.0/sz.w, 2.0/sz.h ) );
+                        } );
         }
     }
 
@@ -113,14 +118,15 @@ public:
     final void draw()
     {
         fx.use();
-        plane.draw.open();
+        plane.draw( mat4() );
+        //plane.draw.open( mat4() );
 
-        fx.setUniform!int( uniform_fbo, GL_TEXTURE0 );
-        tex.use(); scope(exit) tex.use(0);
-        fx.setUniformVec( tex_res, vec2( 2.0/sz.w, 2.0/sz.h ) );
+        //fx.setUniform!int( uniform_fbo, GL_TEXTURE0 );
+        //tex.use(); scope(exit) tex.use(0);
+        //fx.setUniformVec( tex_res, vec2( 2.0/sz.w, 2.0/sz.h ) );
 
-        plane.draw.cntnt();
-        plane.draw.close();
+        //plane.draw.cntnt( mat4() );
+        //plane.draw.close( mat4() );
         debug log.trace( "draw" );
     }
 

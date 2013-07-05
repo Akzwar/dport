@@ -70,7 +70,7 @@ protected:
         glBindBuffer( vbo[name].type, 0 ); 
     }
 
-    final void bufferData(E)( string name, E[] data, GLenum mem=GL_DYNAMIC_DRAW )
+    final void bufferData(E)( string name, in E[] data, GLenum mem=GL_DYNAMIC_DRAW )
     {
         use();
         auto size = E.sizeof * data.length;
@@ -82,13 +82,13 @@ protected:
         debug log.trace( "bufferData to vbo ", name, " with arr ", data );
     }
 
-    final void genBufferWithData(E)( string name, E[] data, GLenum type=GL_ARRAY_BUFFER, GLenum mem=GL_DYNAMIC_DRAW )
+    final void genBufferWithData(E)( string name, in E[] data, GLenum type=GL_ARRAY_BUFFER, GLenum mem=GL_DYNAMIC_DRAW )
     {
         genBuffer( name, type );
         bufferData( name, data, mem );
     }
 
-    final void predraw_hook_base()
+    final void predraw_hook_base( in mat4 mtr )
     {
         debug log.trace( "predraw start" );
         use();
@@ -103,7 +103,7 @@ protected:
         debug log.trace( "predraw success" );
     }
 
-    final void postdraw_hook_base()
+    final void postdraw_hook_base( in mat4 mtr )
     {
         debug log.trace( "postdraw start" );
         use(0);
@@ -141,9 +141,10 @@ protected:
         if( !find )
             vbo[name].attribs ~= atLoc;
 
+        glEnableVertexAttribArray( atLoc );
         glVertexAttribPointer( atLoc, cast(int)size, type, norm, 
                 cast(int)stride, cast(void*)offset );
-        debug log.info( "set attrib pointer at loc: ", atLoc, ", size: ", size, 
+        debug log.info( "set \"", name, "\" attrib pointer at loc: ", atLoc, ", size: ", size, 
                        ", type: ", type, ", norm: ", norm,  
                        ", stride: ", stride, ", offset: ", offset, " [success]" );
     }
@@ -170,5 +171,6 @@ public:
         debug log.info( "object destruction [success]" );
     }
 
-    SignalBoxNoArgs draw;
+    alias const ref mat4 in_mat4;
+    SignalBox!in_mat4 draw;
 }

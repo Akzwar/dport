@@ -209,7 +209,7 @@ private:
             genBufferWithData( "uv", [ 0.0f,  1, 1,  1,  0,  0, 1, 0 ] );
             setAttribPointer( "uv", "uv", 2, GL_FLOAT );
 
-            this.draw.connect( (){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
+            this.draw.connect( (mtr){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
         }
 
         void setColor( in col4 c ) { bufferData( "clr", vecToArray( [c] ) ); }
@@ -329,8 +329,8 @@ public:
         }
 
         draw.addPair( &predraw, (){ tex.use(0); } );
-        draw.addPair( (){ dr.reshape( res.rect ); }, (){} );
-        draw.connect( &(dr.draw.opCall) );
+        draw.addOpen( (){ dr.reshape( res.rect ); } );
+        draw.connect( (){ dr.draw.opCall( mat4() ); } );
 
         debug log.info( "TextString create" );
     }
