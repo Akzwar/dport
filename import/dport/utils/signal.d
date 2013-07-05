@@ -73,32 +73,41 @@ unittest
 
 /++
 Расширяет концепцию Signal, выполняет в прямом порядке 
-делегаты open из списка пар, затем выполняет в прямом порядке контент,
-затем в обратном делегаты close из списка пар.
+делегаты из списка open_funcs, затем выполняет в прямом порядке контент,
+затем в обратном делегаты из списка close_funcs.
 
 See_Also: Signal
 +/
 struct SignalBox(Args...)
 {
-    /++ тип пары делегатов +/
-    struct pairtype
-    {
-        void delegate(Args) open;
-        void delegate(Args) close;
-    }
-
     /++ тип контента +/
     struct cntnttype { void delegate(Args) fun; }
 
-    pairtype[] pairs;
+    cntnttype[] open_funcs;
+    cntnttype[] close_funcs;
     cntnttype[] content;
 
-    /++ добавляет пару делегатов под определённым именем +/
+    /++ добавляет пару делегатов +/
     void addPair( void delegate(Args) o, void delegate(Args) c )
     {
         if( o is null ) throw new SignalException( "signalbox get null open delegate" );
         if( c is null ) throw new SignalException( "signalbox get null close delegate" );
-        pairs ~= pairtype( o, c );
+        open_funcs ~= cntnttype( o );
+        close_funcs ~= cntnttype( c );
+    }
+
+    /++ добавляет делегат открытия +/
+    void addOpen( void delegate(Args) f )
+    {
+        if( f is null ) throw new SignalException( "signalbox get null open delegate" );
+        open_funcs ~= cntnttype( f );
+    }
+
+    /++ добавляет делегат закрытия +/
+    void addClose( void delegate(Args) f )
+    {
+        if( f is null ) throw new SignalException( "signalbox get null close delegate" );
+        close_funcs ~= cntnttype( f );
     }
 
     /++ добавляет контент +/
@@ -116,9 +125,9 @@ struct SignalBox(Args...)
         close( args );
     }
 
-    void open( Args args ) { foreach( s; pairs ) s.open( args ); }
+    void open( Args args ) { foreach( s; open_funcs ) s.fun( args ); }
     void cntnt( Args args ) { foreach( c; content ) c.fun( args ); }
-    void close( Args args ) { foreach_reverse( s; pairs ) s.close( args ); }
+    void close( Args args ) { foreach_reverse( s; close_funcs ) s.fun( args ); }
 }
 
 alias SignalBox!() SignalBoxNoArgs;
