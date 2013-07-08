@@ -635,7 +635,7 @@ struct mat(size_t H, size_t W,dtype=float)
 
     @property auto T() const
     {
-        mat!(W,H) r;
+        mat!(W,H,dtype) r;
         foreach( i; 0 .. H )
             foreach( j; 0 .. W )
                 r[j,i] = this[i,j]; 
@@ -772,6 +772,35 @@ struct mat(size_t H, size_t W,dtype=float)
             }
 
             return self( invt );
+        }
+
+        static if( W == 3 )
+        {
+            @property self true_inv() const
+            {
+                alias this a;
+
+                /+ для удобства
+                    a.data = [ a[0,0], a[0,1], a[0,2],
+                               a[1,0], a[1,1], a[1,2],
+                               a[2,0], a[2,1], a[2,2] ];
+                 +/
+
+                auto A = self( [
+                 (a[1,1]*a[2,2]-a[1,2]*a[2,1]), 
+                -(a[1,0]*a[2,2]-a[1,2]*a[2,0]), 
+                 (a[1,0]*a[2,1]-a[1,1]*a[2,0]),
+
+                -(a[0,1]*a[2,2]-a[0,2]*a[2,1]), 
+                 (a[0,0]*a[2,2]-a[0,2]*a[2,0]), 
+                -(a[0,0]*a[2,1]-a[0,1]*a[2,0]),
+
+                 (a[0,1]*a[1,2]-a[0,2]*a[1,1]), 
+                -(a[0,0]*a[1,2]-a[0,2]*a[1,0]), 
+                 (a[0,0]*a[1,1]-a[0,1]*a[1,0]),
+                               ] );
+                return A.T / ( a[0,0] * A[0,0] + a[0,1] * A[0,1] + a[0,2] * A[0,2] );
+            }
         }
 
         static if( W == 4 )
@@ -943,6 +972,29 @@ unittest
     foreach( i; 0 .. gg1.h )
         foreach( j; 0 .. gg1.w )
             assert( abs( gg1[i,j] - cast(float)(i==j) ) < 1.0e-6 );
+}
+
+unittest
+{
+    void test_mat3_inv( in mat3 a )
+    {
+        auto b = a.true_inv;
+        auto r = a * b;
+
+        foreach( i; 0 .. r.h )
+            foreach( j; 0 .. r.w )
+                assert( abs( r[i,j] - cast(float)(i==j) ) < 1.0e-6 );
+    }
+
+    auto a = mat3( [ 2, 3, 8,
+                     1, 0, 3,
+                     4, 5, 2 ] );
+    test_mat3_inv( a );
+
+    auto b = mat3( [ 0, 1, 0,
+                     1, 0, 0,
+                     0, 0, 1 ] );
+    test_mat3_inv( b );
 }
 
 unittest
