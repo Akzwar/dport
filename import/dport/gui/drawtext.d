@@ -285,7 +285,7 @@ protected:
             foreach( r; 0 .. g.rect.h )
                 foreach( v; 0 .. g.rect.w )
                 {
-                    long index = (yy + r) * res.rect.w + xx + v;
+                    uint index = (yy + r) * res.rect.w + xx + v;
                     res.buffer[ index ] = g.buffer[ r * g.rect.w + v ];
                 }
         }
