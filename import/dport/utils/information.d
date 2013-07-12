@@ -1,4 +1,4 @@
-module information;
+module dport.utils.information;
 
 /++ еденица информации +/
 struct Information(Type)
