@@ -1,15 +1,20 @@
 module dport.isys.neiro.art;
 
 import dport.utils.information,
-       dport.utils.system,
+       //dport.utils.system,
        dport.math.types,
        std.math;
 
-mixin( defaultModuleLogUtils( "ARTDetectorException" ) );
+//mixin( defaultModuleLogUtils( "ARTDetectorException" ) );
+class ARTDetectorException: Exception { this( string msg ){ super( msg ); } }
 
-class ART( size_t DIM ) 
+version(unittest){ import std.stdio; }
+
+private float default_diff( float a, float b ){ return abs( a - b ); }
+class ART( size_t DIM, TYPE=float, alias DIFF=default_diff ) 
+    if( is( typeof(DIFF(TYPE.init, TYPE.init)) : float ) )
 {
-    alias tensor!(DIM,float) MapType;
+    alias tensor!(DIM,TYPE) MapType;
     alias Information!size_t RetType;
 
     float threshold;
@@ -35,7 +40,7 @@ class ART( size_t DIM )
         {
             float d = 0;
             foreach( i; 0 .. img.data.length )
-                d += abs( img.data[i] - dimg.data[i] );
+                d += DIFF( img.data[i], dimg.data[i] );
             d /= img.data.length;
             return d;
         }
@@ -54,10 +59,13 @@ class ART( size_t DIM )
 
     Image[] images;
 
+    this( float th = 0.05 ){ threshold = th; }
+
     RetType opCall( in MapType img )
     {
-        float min_diff = float.max;
+        float min_diff = float.max-1;
         size_t img_no = 0;
+
 
         foreach( i, saved; images )
         {
@@ -87,4 +95,28 @@ class ART( size_t DIM )
 
         return rt;
     }
+}
+
+unittest
+{
+    alias ART!(2,real,(a,b){ return (a-b)^^2; }) ART_m2;
+    auto map1 = tensor!(2,real)( [ 3, 3 ] );
+    map1.data[] = [ .1L, 0, 0,
+                 .1, .1, 0,
+                  0,  0, .1 ];
+    auto test = new ART_m2;
+    assert( test( map1 ).val == 0, "init map1" );
+    assert( test( map1 ).val == 0, "first map1 test" );
+    map1.data[] = [ .09L, 0, 0,
+                    .1, .1, 0,
+                    0,  0, .1 ];
+    assert( test( map1 ).val == 0, "second map1 test" );
+    map1.data[] = [ .0L, 1, 0,
+                    .1, .1, 0,
+                    1,  0, .1 ];
+    assert( test( map1 ).val == 1, "init map2" );
+    map1.data[] = [ .0L, 1.1, 0,
+                    .1, .1, 0,
+                    1,  0, .1 ];
+    assert( test( map1 ).val == 1, "first test map2" );
 }
