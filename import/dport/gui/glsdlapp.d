@@ -126,7 +126,7 @@ private:
     void idle()
     {
         sw.stop();
-        vh.idle( sw.peek().to!("seconds", real)() );
+        vh.idle( sw.peek().to!("seconds", double)() );
         sw.reset();
         sw.start();
     }
