@@ -1083,3 +1083,120 @@ unittest
     assert( is( typeof(e) == mat!(5,1,float) ) );
     assert( e.data == [ 2.0f, 3, 0, 0, 0 ] );
 }
+
+import std.string: format;
+
+struct tensor( size_t Dim, Type )
+{
+    alias tensor!(Dim,Type) self;
+    Type[] data; 
+    size_t[Dim] dim;
+
+    this( size_t[Dim] size... )
+    {
+        foreach( i, s; size ) if( s == 0 )
+            throw new TypeException( "bad tensor dimension #" ~ toStr(i) ~ " = 0" ) );
+        dim = size.dup;
+        size_t v = 1;
+        foreach( s; dim ) v *= s;
+        data.length = v;
+    }
+
+    this(this)
+    {
+        data = data.dup;
+        dim = dim.dup;
+    }
+
+    auto opAssign( in self b )
+    {
+        data = b.data.dup;
+        dim = b.dim.dup;
+    }
+
+    auto opBinary(string op)( in self b ) const
+        if( is( typeof( mixin( "Type.init " ~ op ~ " Type.init" ) ) : Type ) )
+    {
+        if( dim != b.dim ) throw new TypeException( "bad sizes" ); 
+
+        auto ret = self( dim );
+        mixin( "ret.data[] = this.data[] " ~ op ~ "b.data[];" );
+        return ret;
+    }
+
+    auto opBinary(string op,E)( E b ) const
+        if( is( typeof( mixin( "Type.init " ~ op ~ " E.init" ) ) : Type ) )
+    {
+        auto ret = self( dim );
+        mixin( "ret.data[] = this.data[] " ~ op ~ "b;" );
+        return ret;
+    }
+
+    ref Type opIndex( size_t[Dim] crd... ) 
+    {
+        size_t index = crd[0];
+        foreach( i; 0 .. Dim )
+            if( crd[i] >= dim[i] )
+                throw new TypeException( "bad index" );
+        foreach( i; 1 .. Dim )
+        {
+            size_t buf = 1;
+            foreach( j; 0 .. i )
+                buf *= dim[j];
+            index += crd[i] * buf;
+        }
+        return data[index]; 
+    }
+}
+
+unittest
+{
+    alias tensor!(2,float) dynmat2;
+    auto dm = dynmat2( 3,3 );
+    dm.data = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    assert( dm[1,2] == 8 );
+
+    alias tensor!(3,float) tns3;
+    auto t = tns3( 2,2,2 );
+    t.data = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    assert( t[1,0,1] == 6 );
+    t[1,1,1] = 12;
+    assert( t.data == [ 1, 2, 3, 4, 5, 6, 7, 12 ] );
+
+    auto tt = tns3( 3,3,3 );
+    tt.data[] = 0;
+    tt[2,1,0] = 1;
+    tt[1,1,2] = 1;
+    assert( tt.data == [ 0, 0, 0, 
+                         0, 0, 1,
+                         0, 0, 0,
+                         
+                         0, 0, 0,
+                         0, 0, 0,
+                         0, 0, 0,
+                         
+                         0, 0, 0,
+                         0, 1, 0,
+                         0, 0, 0 ]
+          );
+}
+
+unittest
+{
+    alias tensor!(2,float) dmat2;
+
+    auto dm1 = dmat2( 3, 3 );
+    dm1.data = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    auto dm2 = dmat2( 3, 3 );
+    dm2.data = [ 1.0f, 2, 3, 4, 5, 5, 7, 8, 9 ].reverse;
+    auto dm_t1 = dm1 + dm2;
+    assert( dm_t1.data == [ 10, 10, 10, 9, 10, 10, 10, 10, 10 ] );
+    auto dm_t2 = dm1 * dm2;
+    assert( dm_t2.data == [ 9, 16, 21, 20, 25, 24, 21, 16, 9 ] );
+    auto dm_t3 = dm_t2 / 10.0;
+    auto dm_t3_res = [ .9f, 1.6, 2.1, 2.0, 2.5, 2.4, 2.1, 1.6, .9 ];
+    float diff = 0;
+    foreach( i, v; dm_t3.data )
+        diff += (dm_t3_res[i] - v) ^^ 2;
+    assert( diff <= 1e-13 );
+}
