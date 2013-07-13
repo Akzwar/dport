@@ -2,6 +2,7 @@
  типы данных vec, mat, rect
  +/
 module dport.math.types;
+@system:
 
 import std.math;
 
@@ -72,7 +73,7 @@ template isAllConv(D,T...)
 
 private static pure string toStr( size_s x )
 {
-    auto ch = [ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" ];
+    enum ch = [ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" ];
     string buf = x>=0?"":"-";
     x = x>0?x:-x;
     if( x < 10 ) buf ~= ch[x]; 
@@ -94,7 +95,6 @@ private static pure string dataComp(string S, string v)
     return buf[0 .. $-1];
 }
 
-private mixin template _workaround4424() { @disable void opAssign(typeof(this)); }
 private template isComp( string A, E, string B, T )
 { enum bool isComp = A.length == B.length && is( E : T ); }
 
@@ -142,8 +142,6 @@ struct vec( string S, T=real )
             data[i+b.length] = val;
     }
 
-    mixin _workaround4424;
-
     auto opAssign(string G,E)( in vec!(G,E) b ) if( isComp!(G,E,S,T) )
     {
         foreach( i, ref val; data )
@@ -153,8 +151,9 @@ struct vec( string S, T=real )
 
     auto opUnary(string op)() const if( op == "-" )
     {
-        auto ret = stype(this);
-        ret.data[] *= -1.0;
+        stype ret;
+        foreach( i, val; this.data )
+            ret.data[i] = -1.0 * val;
         return ret;
     }
 
