@@ -1095,7 +1095,7 @@ struct tensor( size_t Dim, Type )
     this( size_t[Dim] size... )
     {
         foreach( i, s; size ) if( s == 0 )
-            throw new TypeException( "bad tensor dimension #" ~ toStr(i) ~ " = 0" ) );
+            throw new TypeException( "bad tensor dimension #" ~ toStr(i) ~ " = 0" );
         dim = size.dup;
         size_t v = 1;
         foreach( s; dim ) v *= s;
