@@ -2,7 +2,6 @@
  типы данных vec, mat, rect
  +/
 module dport.math.types;
-@system:
 
 import std.math;
 
@@ -1096,22 +1095,24 @@ struct tensor( size_t Dim, Type )
     {
         foreach( i, s; size ) if( s == 0 )
             throw new TypeException( "bad tensor dimension #" ~ toStr(i) ~ " = 0" );
-        dim = size.dup;
+        dim[] = size[];
         size_t v = 1;
         foreach( s; dim ) v *= s;
         data.length = v;
     }
 
-    this(this)
+    this(this) { data = data.dup; }
+
+    this(self b)
     {
-        data = data.dup;
-        dim = dim.dup;
+        dim = b.dim;
+        data = b.data.dup;
     }
 
-    auto opAssign( in self b )
+    auto opAssign(self b)
     {
+        dim = b.dim;
         data = b.data.dup;
-        dim = b.dim.dup;
     }
 
     auto opBinary(string op)( in self b ) const
@@ -1146,6 +1147,22 @@ struct tensor( size_t Dim, Type )
             index += crd[i] * buf;
         }
         return data[index]; 
+    }
+
+    Type opIndex( size_t[Dim] crd... ) const
+    {
+        size_t index = crd[0];
+        foreach( i; 0 .. Dim )
+            if( crd[i] >= dim[i] )
+                throw new TypeException( "bad index" );
+        foreach( i; 1 .. Dim )
+        {
+            size_t buf = 1;
+            foreach( j; 0 .. i )
+                buf *= dim[j];
+            index += crd[i] * buf;
+        }
+        return cast(Type)data[index]; 
     }
 }
 

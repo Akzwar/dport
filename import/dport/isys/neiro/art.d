@@ -10,7 +10,7 @@ class ARTDetectorException: Exception { this( string msg ){ super( msg ); } }
 
 version(unittest){ import std.stdio; }
 
-private float default_diff( float a, float b ){ return abs( a - b ); }
+float default_diff( float a, float b ){ return abs( a - b ); }
 class ART( size_t DIM, TYPE=float, alias DIFF=default_diff ) 
     if( is( typeof(DIFF(TYPE.init, TYPE.init)) : float ) )
 {
@@ -30,7 +30,7 @@ class ART( size_t DIM, TYPE=float, alias DIFF=default_diff )
             img.data[] = 0;
         }
 
-        this( in MapType init )
+        this( MapType init )
         {
             img = init;
             cnt = 1;
@@ -61,11 +61,10 @@ class ART( size_t DIM, TYPE=float, alias DIFF=default_diff )
 
     this( float th = 0.05 ){ threshold = th; }
 
-    RetType opCall( in MapType img )
+    RetType opCall( MapType img )
     {
         float min_diff = float.max-1;
         size_t img_no = 0;
-
 
         foreach( i, saved; images )
         {
