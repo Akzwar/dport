@@ -329,7 +329,7 @@ public:
         }
 
         draw.addPair( &predraw, (){ tex.use(0); } );
-        draw.addOpen( (){ dr.reshape( res.rect ); } );
+        draw.addBegin( (){ dr.reshape( res.rect ); } );
         draw.connect( (){ dr.draw.opCall( mat4() ); } );
 
         debug log.info( "TextString create" );

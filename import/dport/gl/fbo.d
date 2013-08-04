@@ -35,7 +35,7 @@ protected:
             genBufferWithData( "vert", [ -1.0f, -1, 1, -1, -1,  1, 1,  1, ] );
             setAttribPointer( "vert", v_coord_name, 2, GL_FLOAT );
             draw.connect( (mtr){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
-            draw.addOpen( (mtr){ 
+            draw.addBegin( (mtr){ 
                             fx.setUniform!int( uniform_fbo, GL_TEXTURE0 );
                             tex.use(); scope(exit) tex.use(0);
                             fx.setUniformVec( tex_res, vec2( 2.0/sz.w, 2.0/sz.h ) );
