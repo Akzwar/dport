@@ -3,8 +3,9 @@ module dport.utils.information;
 /++ еденица информации +/
 struct Information(Type)
 {
-    /++ возможность доступа +/
-    bool access_ability = true;
+    /++ сама информация +/
+    Type val;
+    
     /++ актуальность +/
     float topicality = 0; 
     /++ достоверность +/
@@ -12,8 +13,8 @@ struct Information(Type)
     /++ полнота +/
     float completeness = 0; 
 
-    /++ сама информация +/
-    Type val;
+    /++ возможность доступа +/
+    bool access_ability = true;
 
     alias val this;
 
