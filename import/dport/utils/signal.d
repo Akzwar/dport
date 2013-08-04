@@ -22,7 +22,7 @@ struct Signal(Args...)
     /++ "список дел" +/
     slottype[] slots; 
 
-    /++ добавляет в список делегат с определённым именем +/
+    /++ добавляет в список делегат +/
     void connect( slottype f )
     {
         if( f is null ) throw new SignalException( "signal get null delegate" );
@@ -67,6 +67,75 @@ unittest
     assert( sarr == [ "ok", "okok" ] );
 
     debug log.utest( "signal unittest ok" );
+}
+
+struct NamedSignal( TName, Args... )
+{
+    alias void delegate(Args) slottype;
+    slottype[TName] slots;
+
+    /++ добавляет в список делегат с определённым именем +/
+    void connect( TName name, slottype f )
+    {
+        if( f is null ) throw new SignalException( "signal get null delegate" );
+        slots[name] = f;
+    }
+
+    /++ вызывает делегат под именем +/
+    bool opCall( TName name, Args args )
+    { 
+        auto fun = name in slots;
+        if( fun !is null )
+        {
+            (*fun)( args );
+            return true;
+        }
+        return false;
+    }
+
+    TName[] opCall( TName[] nlist, Args args )
+    {
+        TName[] ret;
+        foreach( name; nlist )
+            if( this.opCall( name, args ) )
+                ret ~= name;
+        return ret;
+    }
+}
+
+unittest
+{
+    size_t[] arr;
+
+    alias NamedSignal!(string, size_t) SU_sig;
+
+    SU_sig susig;
+
+    susig.connect( "add", (a){ arr ~= a; } );
+    susig.connect( "remove", (a){ arr = arr[0 .. a] ~ arr[a+1 .. $]; } );
+
+    susig( "add", 10 );
+    susig( "add", 15 );
+
+    assert( arr == [ 10, 15 ] );
+
+    susig( "add", 20 );
+    auto ret = susig( "add", 25 );
+
+    assert( arr == [ 10, 15, 20, 25 ] );
+    assert( ret == true );
+
+    ret = susig( "remove", 1 ); 
+    assert( arr == [ 10, 20, 25 ] );
+    assert( ret == true );
+
+    ret = susig( "get", 25 );
+    assert( arr == [ 10, 20, 25 ] );
+    assert( ret == false );
+
+    auto ret_names = susig( ["add", "get"], 35 );
+    assert( ret_names == ["add"] );
+    assert( arr == [ 10, 20, 25, 35 ] );
 }
 
 /++
