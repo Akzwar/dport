@@ -12,7 +12,7 @@ version(unittest)
         foreach( x; 0 .. t.dim[0] )
         {
             foreach( y; 0 .. t.dim[1] )
-                stderr.writef( "% 3s ", t[y,x] );
+                stderr.writef( "% 12s ", t[y,x] );
             stderr.writeln();
         }
     }
@@ -77,11 +77,35 @@ public:
 
         static void inhib_weight( ref Square s )
         {
+            enum var = 3;
+            static if( var == 0 )
+            {
             TYPE hx = (s.dim[0]-1)/2.0;
             TYPE hy = (s.dim[1]-1)/2.0;
             foreach( x; 0 .. s.dim[0] )
                 foreach( y; 0 .. s.dim[1] )
                     s[x,y] = abs(x - hx) + abs(y - hy) + 0.2;
+            }
+            else static if( var == 1 )
+            {
+            import std.random;
+            foreach( ref d; s.data )
+                d = uniform( 0, 100 );
+            }
+            else static if( var == 2 )
+            {
+            s.data[] = 1;
+            }
+            else static if( var == 3 )
+            {
+            import std.random;
+            TYPE hx = (s.dim[0]-1)/2.0;
+            TYPE hy = (s.dim[1]-1)/2.0;
+            foreach( x; 0 .. s.dim[0] )
+                foreach( y; 0 .. s.dim[1] )
+                    s[x,y] = 20 - abs(x - hx) + abs(y - hy) + uniform( -1.0, 1.0 );
+
+            }
         }
 
         static void norm( ref Square s )
@@ -126,35 +150,26 @@ public:
                     I += inhib[y,x] * buf;
                 }
 
-            //TYPE I = 0;
-            //auto half = vec2s( inhib.dim[0]/2, inhib.dim[1]/2 );
-            //foreach( x; inhib.dim[0] )
-            //    foreach( y; inhib.dim[1] )
-            //        I += inhib[x,y] * fun( self.x + x - half.x, self.y + y - half.y );
-
-            I *= bi;
-
-            last_output = ( E - I ) / ( 1.0 + I );
-            last_output = last_output > 0 ? last_output : 0;
             last_excit = E;
-            last_inhib = I;
-            return last_output;
+            last_inhib = I * bi;
+            return E;
         }
 
-        TYPE lateral( TYPE delegate( size_s, size_s ) fun )
+        TYPE lateral(T)( T delegate( size_s, size_s ) fun )
         {
-            TYPE I = 0;
+            TYPE inh = 0;
             auto half = vec2s( lateral_inhib.dim[0]/2, lateral_inhib.dim[1]/2 );
             foreach( x; 0 .. lateral_inhib.dim[0] )
                 foreach( y; 0 .. lateral_inhib.dim[1] )
                 {
                     if( x - half.x && y - half.y )
-                        I += lateral_inhib[y,x] * fun( self.x + x - half.x, self.y + y - half.y );
+                        inh += lateral_inhib[y,x] * fun( self.x + x - half.x, self.y + y - half.y ).last_output;
                 }
-            I *= bi;
-            auto ret = ( last_output - I ) / ( 1.0 + I );
-            ret = ret > 0 ? ret : 0;
-            return ret;
+            //auto I = ( ( last_inhib - inh ) / ( 1 + inh ) ) * bi;
+            auto I = ( last_inhib + inh ) * bi;
+            last_output = ( E - I ) / ( 1.0 + I );
+            last_output = last_output > 0 ? last_output : 0;
+            return last_output;
         }
 
         void learn( float q, bool notwinner=false )
@@ -165,17 +180,6 @@ public:
 
             if( notwinner ) bi += q * last_inhib;
             else bi += q * last_excit * 0.5 / last_inhib;
-
-            //if( notwinner )
-            //    foreach( x; 0 .. lateral_inhib.dim[0] )
-            //        foreach( y; 0 .. lateral_inhib.dim[1] )
-            //            lateral_inhib[y,x] += q * last_inhib;
-            //else
-            //{
-            //    foreach( x; 0 .. lateral_inhib.dim[0] )
-            //        foreach( y; 0 .. lateral_inhib.dim[1] )
-            //            lateral_inhib[y,x] += q * last_excit * 0.5 / last_inhib;
-            //}
         }
     }
 
@@ -202,7 +206,6 @@ public:
         output = Square( sizes[0] );
         buf = Square( sizes[0] );
         romb_mask( sizes[1][0] );
-        //links = new Link[][]( sizes[0][0], sizes[0][1] );
         links = tensor!(2,Link)( sizes[0] ); 
         foreach( x; 0 .. links.dim[0] )
             foreach( y; 0 .. links.dim[1] )
@@ -218,9 +221,9 @@ public:
             return s[y,x];
         }
 
-        ref T f2(T)( tensor!(2,T) s, size_s x, size_s y )
+        T f2(T)( tensor!(2,T) s, size_s x, size_s y )
         {
-            if( x < 0 || x >= s.dim[0] || y < 0 || y >= s.dim[1] ) return cast(T)false;
+            if( x < 0 || x >= s.dim[0] || y < 0 || y >= s.dim[1] ) return 0;
             return s[y,x];
         }
     }
@@ -235,7 +238,7 @@ public:
                 TYPE win_val = 0;
                 foreach( ind; mask_indexs )
                 {
-                    auto bval = f1( output, x + ind.x, y + ind.y );
+                    auto bval = f2( output, x + ind.x, y + ind.y );
                     if( win_val < bval )
                     {
                         win_pos = ind;
@@ -262,15 +265,17 @@ public:
 
     override void set( Square s, bool do_learn=false )
     { 
-        foreach( i, link; links.data )
-            buf.data[i] = link.output( (x,y){ return f1( s, x, y ); } );
-                
-        foreach( i, link; links.data )
-            output.data[i] = link.lateral( (x,y){ return f1( buf, x, y ); } );
+        foreach( k; 0 .. 4 ) {
+            foreach( i, link; links.data )
+                buf.data[i] = link.output( (x,y){ return f2( s, x, y ); } );
+                    
+            foreach( i, link; links.data )
+                output.data[i] = link.lateral( (x,y){ return f1( links, x, y ); } );
+        }
 
         //TYPE x = 0;
-        //foreach( o; output.data ) x += o;
-        //if(x) foreach( ref o; output.data ) o /= x;
+        //foreach( v; output.data ) x += v;
+        //if( x ) foreach( ref v; output.data ) v /= x;
 
         if(do_learn) learn( 16, 2 );
     }
@@ -306,85 +311,107 @@ class Kognitron(TYPE=float)
 unittest
 {
     size_t[2] res = [ 9, 9 ];
-    auto k = new Kognitron!float( 5, [ res, [5UL,5], [7UL,7] ] );
+    auto k = new Kognitron!float( 12, [ res, [5UL,5], [7UL,7] ] );
 
     alias Kognitron!float.Square Square;
 
-    auto map1 = Square( res );
-    auto map2 = Square( res );
+    Square[] map;
+    foreach( i; 0 .. 3 )
+        map ~= Square( res );
 
-    map1.data[] = [.0f,0,0,0,0,0,0,0,0,
+    map[0].data[] = [.0f,0,0,0,0,0,0,0,0,
+                     0,1,1,1,1,1,1,1,0,
+                     0,1,1,1,1,1,1,1,0,
+                     0,1,1,0,0,0,1,1,0,
+                     0,1,1,0,0,0,1,1,0,
+                     0,1,1,0,0,0,1,1,0,
+                     0,1,1,1,1,1,1,1,0,
+                     0,1,1,1,1,1,1,1,0,
+                     0,0,0,0,0,0,0,0,0,
+                 ];
+    map[1].data[] = [.0f,0,0,0,0,0,0,0,0,
+                     0,0,0,0,1,0,0,0,0,
                      0,0,0,1,1,1,0,0,0,
-                     0,0,0,0,1,1,0,0,0,
-                     0,0,0,0,1,1,0,0,0,
-                     0,0,0,0,1,1,0,0,0,
-                     0,0,0,0,1,1,0,0,0,
-                     0,0,0,0,1,1,0,0,0,
-                     0,0,0,1,1,1,1,0,0,
+                     0,0,1,1,0,1,1,0,0,
+                     0,1,1,0,0,0,1,1,0,
+                     0,0,1,1,0,1,1,0,0,
+                     0,0,0,1,1,1,0,0,0,
+                     0,0,0,0,1,0,0,0,0,
                      0,0,0,0,0,0,0,0,0,
                  ];
-    map2.data[] = [.0f,0,0,0,0,0,0,0,0,
-                     0,0,1,1,1,1,1,0,0,
-                     0,0,1,1,1,1,1,0,0,
-                     0,0,0,0,0,1,1,0,0,
-                     0,0,0,0,0,1,1,0,0,
-                     0,0,0,0,0,1,1,0,0,
-                     0,0,1,1,1,1,1,0,0,
-                     0,0,1,1,1,1,1,0,0,
+    map[2].data[] = [.0f,0,0,0,0,0,0,0,0,
+                     0,0,0,0,1,0,0,0,0,
+                     0,0,0,0,1,0,0,0,0,
+                     0,0,0,1,.5,1,0,0,0,
+                     0,0,0,1,0,1,0,0,0,
+                     0,0,1,.5,0,.5,1,0,0,
+                     0,.5,1,.5,0,.5,1,.5,0,
+                     0,1,1,1,1,1,1,1,0,
                      0,0,0,0,0,0,0,0,0,
                  ];
-
-    Square ret;
 
     foreach( i; 0 .. 20 )
     {
-        ret = k.proc( map1, true );
-        //print( ret, " ---- map1 ret --- " ~ to!string(i) );
-
-        ret = k.proc( map2, true );
-        //print( ret, " ---- map2 ret --- " ~ to!string(i) );
+        foreach( m; map )
+            k.proc( m, true );
     }
-    auto ret1 = k.proc( map1 );
-    auto ret2 = k.proc( map2 );
-
-    print( ret1, " ---- map1 ret --- final" );
-    print( ret2, " ---- map2 ret --- final" );
 
     import dport.isys.neiro.art;
 
     alias ART!(2,float,(a,b){ return abs(a-b); }) ART_m2;
     auto nart = new ART_m2( 0.01 );
+    Square[] ret;
+    foreach( i, m; map )
+    {
+        auto buf = k.proc( m );
+        ret ~= buf;
+        print( buf, " ---- map" ~ to!string(i) ~ " ret --- final" );
+    }
 
-    stderr.writeln( nart( ret1 ).val );
-    stderr.writeln( nart( ret2 ).val );
+    foreach( r; ret )
+        stderr.writeln( nart( r ).val );
 
-    map1.data[] = [.0f,0,0,0,0,0,0,0,0,
-                     0,0,0,1,0,1,0,0,0,
+    map[0].data[] = [.0f,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                     .0f,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0,
+                     0.0,1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,
+                     0.0,1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,
+                     0.0,1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,
+                     0.0,1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,
+                     0.0,0.9,0.1,0.3,0.5,0.3,0.1,0.9,0.0,
+                     0.0,1.0,0.9,0.7,0.5,0.7,0.9,1.0,0.0,
+                     0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+                 ];
+    map[1].data[] = [.0f,0,0,.1,0,0,0,0,0,
+                     0,0,0,.1,1,.1,0,0,0,
+                     0,0,.1,1,.1,1,.1,0,0,
+                     0,0,1,.1,0,.1,1,.1,0,
+                     .1,1,.1,0,0,0,.1,1,.1,
+                     0,.1,1,.1,0,.1,1,.1,0,
+                     0,0,.1,1,.1,1,.1,0,0,
+                     0,0,0,.1,1,.1,0,0,0,
+                     0,0,0,0,.1,0,0,0,0,
+                 ];
+    map[2].data[] = [.0f,0,0,0,0,0,0,0,0,
                      0,0,0,0,1,0,0,0,0,
-                     0,0,0,0,1,1,0,0,0,
-                     1,1,1,0,0,1,0,0,0,
-                     0,1,1,0,1,0,0,0,0,
-                     0,0,3,0,1,1,0,0,0,
-                     0,0,0,1,1,1,1,0,0,
+                     0,0,0,0,1,0,0,0,0,
+                     0,0,0,1,.5,1,0,0,0,
+                     0,0,0,1,0,1,0,0,0,
+                     0,0,1,.5,0,.5,1,0,0,
+                     0,.5,1,.5,0,.5,1,.5,0,
+                     0,1,1,1,1,1,1,1,0,
                      0,0,0,0,0,0,0,0,0,
                  ];
-    map2.data[] = [.0f,0,0,0,0,0,0,0,0,
-                     0,0,1,1,1,1,1,0,0,
-                     0,0,1,0,0,0,1,0,0,
-                     0,0,0,0,0,0,1,0,0,
-                     0,0,0,0,0,0,1,0,0,
-                     0,0,0,0,0,0,1,0,0,
-                     0,0,1,0,0,0,1,0,0,
-                     0,0,1,1,1,1,1,0,0,
-                     0,0,0,0,0,0,0,0,0,
-                 ];
+    ret.length = 0;
+    foreach( i, m; map )
+    {
+        auto buf = k.proc( m );
+        ret ~= buf;
+        print( buf, " ---- map" ~ to!string(i) ~ " ret --- mod" );
+    }
 
-    ret1 = k.proc( map1 );
-    ret2 = k.proc( map2 );
-
-    print( ret1, " ---- map1 ret --- final" );
-    print( ret2, " ---- map2 ret --- final" );
-
-    stderr.writeln( nart( ret1 ).val );
-    stderr.writeln( nart( ret2 ).val );
+    foreach( r; ret )
+    {
+        auto buf = nart( r );
+        stderr.writeln( buf.val, " ", buf.completeness );
+    }
 }
