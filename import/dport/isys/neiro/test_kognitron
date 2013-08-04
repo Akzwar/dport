@@ -1,0 +1,1 @@
+dmd -main -unittest -I../../.. kognitron.d ../../../dport/math/types.d art.d && ./kognitron
