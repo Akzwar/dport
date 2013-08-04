@@ -16,28 +16,26 @@ mixin( defaultModuleLogUtils( "SignalException" ) );
 +/
 struct Signal(Args...)
 { 
-    /++
-        хранит имя и делегат
-    +/
-    struct slottype { void delegate(Args) fun; }
+    /++ делегат +/
+    alias void delegate(Args) slottype;
 
     /++ "список дел" +/
     slottype[] slots; 
 
     /++ добавляет в список делегат с определённым именем +/
-    void connect( void delegate(Args) f )
+    void connect( slottype f )
     {
         if( f is null ) throw new SignalException( "signal get null delegate" );
-        slots ~= slottype( f );
+        slots ~=  f;
     }
 
     /++ вызывает все делегаты в прямом порядке +/
     void opCall( Args args )
-    { foreach( slot; slots ) slot.fun( args ); }
+    { foreach( slot; slots ) slot( args ); }
 
     /++ вызывает все делегаты в обратном порядке +/
     void callReverse( Args args )
-    { foreach_reverse( slot; slots ) slot.fun( args ); }
+    { foreach_reverse( slot; slots ) slot( args ); }
 }
 
 alias Signal!() EmptySignal;
@@ -80,54 +78,54 @@ See_Also: Signal
 +/
 struct SignalBox(Args...)
 {
-    /++ тип контента +/
-    struct cntnttype { void delegate(Args) fun; }
+    /++ делегат +/
+    alias void delegate(Args) slottype;
 
-    cntnttype[] open_funcs;
-    cntnttype[] close_funcs;
-    cntnttype[] content;
+    slottype[] begin;
+    slottype[] end;
+    slottype[] list;
 
     /++ добавляет пару делегатов +/
-    void addPair( void delegate(Args) o, void delegate(Args) c )
+    void addPair( slottype b, slottype e )
     {
-        if( o is null ) throw new SignalException( "signalbox get null open delegate" );
-        if( c is null ) throw new SignalException( "signalbox get null close delegate" );
-        open_funcs ~= cntnttype( o );
-        close_funcs ~= cntnttype( c );
+        if( b is null ) throw new SignalException( "signalbox get null open delegate" );
+        if( e is null ) throw new SignalException( "signalbox get null close delegate" );
+        begin ~= b;
+        end ~= e;
     }
 
     /++ добавляет делегат открытия +/
-    void addOpen( void delegate(Args) f )
+    void addBegin( slottype f )
     {
         if( f is null ) throw new SignalException( "signalbox get null open delegate" );
-        open_funcs ~= cntnttype( f );
+        begin ~= f;
     }
 
     /++ добавляет делегат закрытия +/
-    void addClose( void delegate(Args) f )
+    void addEnd( slottype f )
     {
         if( f is null ) throw new SignalException( "signalbox get null close delegate" );
-        close_funcs ~= cntnttype( f );
+        end ~= f;
     }
 
     /++ добавляет контент +/
-    void connect( void delegate(Args) f )
+    void connect( slottype f )
     {
         if( f is null ) throw new SignalException( "signalbox get null content delegate" );
-        content ~= cntnttype( f );
+        list ~= f;
     }
 
-    /++ производит последовательный вызов всех open, затем контента, затем close +/
+    /++ производит последовательный вызов всех begin, затем контента, затем end в обратном порядке +/
     void opCall( Args args )
     {
-        open( args );
-        cntnt( args );
-        close( args );
+        call_begin( args );
+        call_list( args );
+        call_end( args );
     }
 
-    void open( Args args ) { foreach( s; open_funcs ) s.fun( args ); }
-    void cntnt( Args args ) { foreach( c; content ) c.fun( args ); }
-    void close( Args args ) { foreach_reverse( s; close_funcs ) s.fun( args ); }
+    void call_begin( Args args ) { foreach( f; begin ) f( args ); }
+    void call_list( Args args ) { foreach( f; list ) f( args ); }
+    void call_end( Args args ) { foreach_reverse( f; end ) f( args ); }
 }
 
 alias SignalBox!() SignalBoxNoArgs;
@@ -173,10 +171,8 @@ struct IfListSignal(Args...)
         bool trueval=false; 
     }
 
-    struct slottype
-    {
-        void delegate(Args) fun;
-    }
+    /++ делегат +/
+    alias void delegate(Args) slottype;
 
     condition[] conds;
     slottype[] slots;
@@ -196,18 +192,18 @@ struct IfListSignal(Args...)
 
     /++ добавляет слот в список slots
      +/
-    void connect( void delegate(Args) f )
+    void connect( slottype f )
     {
         if( f is null ) throw new SignalException( "iflistsignal get null delegate" );
-        slots ~= slottype( f );
+        slots ~= f;
     }
 
     /++ добавляет слот в список altslots
      +/
-    void connectAlt( void delegate(Args) f )
+    void connectAlt( slottype f )
     {
         if( f is null ) throw new SignalException( "iflistsignal get null delegate" );
-        altslots ~= slottype( f );
+        altslots ~= f;
     }
 
     /++ вызывает последовательно сначала условия, потом слоты
@@ -215,19 +211,21 @@ struct IfListSignal(Args...)
         при невыполнении условия прекращает проверку
         выполняет вызов слотов из списка altslots
     +/
-    void opCall( Args args )
+    bool opCall( Args args )
     {
-        bool all = true;
+        bool ok = true;
 
         foreach( c; conds )
             if( c.fun( args ) != c.trueval ) 
             {
-                all = false;
+                ok = false;
                 break;
             }
 
-        if( all ) foreach( s; slots ) s.fun( args );
-        else foreach( a; altslots ) a.fun( args );
+        if( ok ) foreach( f; slots ) f( args );
+        else foreach( f; altslots ) f( args );
+
+        return ok;
     }
 }
 
