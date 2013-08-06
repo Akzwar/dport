@@ -155,7 +155,7 @@ class ButtonShape: GLVAO, ButtonDrawContent
 
 class SimpleButton: Button
 {
-    ButtonLabel label;
+    //ButtonLabel label;
     ButtonShape shape;
 
     this( Element par, string font, in irect rect, wstring str=""w, void delegate() onclick=null )
@@ -163,10 +163,10 @@ class SimpleButton: Button
         super( par, rect );
 
         shape = new ButtonShape( this.shader, rect );
-        label = new ButtonLabel( this, font, str, rect.h - 10 );
+        //label = new ButtonLabel( this, font, str, rect.h - 10 );
 
         content ~= shape;
-        content ~= label;
+        //content ~= label;
 
         setUpContent();
 
@@ -176,6 +176,6 @@ class SimpleButton: Button
 
     void setLabel( wstring str )
     {
-        label.setText( str );
+        //label.setText( str );
     }
 }

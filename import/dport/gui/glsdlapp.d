@@ -107,12 +107,13 @@ private:
 
         SDL_GL_SetSwapInterval(1);
 
-        glClearColor( .0f, .0f, .0f, .0f );
+        glClearColor( .0f, .0f, .0f, 1.0f );
         glEnable( GL_BLEND );
 
         glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
         glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
         glEnable( GL_DEPTH_TEST );
+        glEnable( GL_SCISSOR_TEST );
 
         //glEnable( GL_MULTISAMPLE );
         //glEnable( GL_LINE_SMOOTH );
@@ -133,7 +134,9 @@ private:
 
     void draw()
     {
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        glScissor( 0, 0, winsize.w, winsize.h );
+        glClear( GL_COLOR_BUFFER_BIT | 
+                 GL_DEPTH_BUFFER_BIT );
         vh.draw();
     }
 

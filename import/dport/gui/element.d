@@ -79,30 +79,50 @@ private:
     @property ivec2 offset() const
     {
         if( parent )
-        {
-            int x = bbox.x + parent.offset.x;
-            int y = parent.offset.y + parent.bbox.h - ( bbox.y + bbox.h );
-            return ivec2( x, y );
-        }
-        else return bbox.pt[0];
+            return bbox.pos + parent.offset;
+        else return bbox.pos;
+    }
+
+    @property int fullH() const 
+    {
+        if( parent ) return parent.fullH;
+        else return bbox.h;
     }
 
     ivec2 localMouse( in ivec2 mpos ){ return mpos - bbox.pos; }
 
-    void setViewport( in irect view )
-    { glViewport( view.x, view.y, view.w, view.h ); }
+    irect visrect;
 
-    irect checkRect( in irect ch )
+    irect getVisible( in irect ch )
     {
-        // TODO: продумать: область рисования ограничивается родителем
-        return ch;
+        irect buf = ch;
+        buf.pos += bbox.pos;
+        auto ret = bbox.overlap( buf );
+        if( parent ) 
+            ret = parent.getVisible( ret );
+        ret.pos -= bbox.pos;
+        return ret;
+    }
+
+    void setView()
+    { 
+        auto draw = bbox;  
+        auto view = bbox;
+        if( parent )
+        {
+            view.pos += parent.offset;
+            draw = parent.getVisible( bbox );
+            draw.pos += parent.offset;
+        }
+        visrect = draw;
+        glViewport( view.x, fullH - (view.y + view.h), view.w, view.h ); 
+        glScissor( draw.x, fullH - (draw.y + draw.h), draw.w, draw.h );
     }
 
     void predraw()
     {
-        auto r = irect( offset, bbox.size );
-        if( parent ) setViewport( parent.checkRect( r ) );
-        else setViewport( r );
+        setView();
+
         glDisable( GL_DEPTH_TEST );
         shader.setUniformVec( "winsize", vec2( bbox.size ) );
         shader.setUniform!int( "use_texture", 0 );
@@ -154,23 +174,25 @@ public:
         else 
             shader = new ShaderProgram( SS_ELEMENT );
 
+        visrect = irect( 0,0, 1,1 );
+
         draw.addPair( &predraw, (){ 
                 foreach_reverse( ch; childs ) 
-                    if( ch.visible ) 
+                    if( ch.visible && ch.visrect.area > 0 ) 
                         ch.draw(); 
                 });
 
         keyboard.addCondition( (mpos, key){ 
                 return find( localMouse( mpos ) ); 
                 }, 0 );
-        keyboard.connectAlt( ( mpos, key ){
+        keyboard.connectAlt( (mpos, key){
                 if( cur ) cur.keyboard( localMouse( mpos ), key );
                 });
 
         mouse.addCondition( (mpos, me){ 
                 return find( localMouse( mpos ) ); 
                 }, 0 );
-        mouse.connectAlt( ( mpos, me ){
+        mouse.connectAlt( (mpos, me){
                 if( cur ) cur.mouse( localMouse( mpos ), me );
                 });
 
