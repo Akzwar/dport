@@ -392,6 +392,10 @@ struct vrect(T)
 
     @property ref ptype pos(){ return pt[0]; }
     @property ref ptype size(){ return pt[1]; }
+    @property ptype pos() const { return pt[0]; }
+    @property ptype size() const { return pt[1]; }
+
+    @property T area() const { return abs( w * h ); }
 
     bool opBinaryRight(string op,string G,E)( in vec!(G,E) p ) const
         if( ( is( E : T ) || is( T : E ) ) && G.length == 2 && op == "in" )
@@ -422,6 +426,65 @@ struct vrect(T)
                           offset.data[0] + this.x + this.w, offset.data[1] + this.y,
                           offset.data[0] + this.x,   offset.data[1] + this.y + this.h,
                           offset.data[0] + this.x + this.w, offset.data[1] + this.y + this.h ];
+    }
+
+    auto overlap(E)( in vrect!E rect ) const
+        if( is( E : T ) )
+    {
+        auto p2_self = this.pos + this.size;
+        auto p2_rect = rect.pos + rect.size;
+
+        auto p1 = vec!("xy",T)( rect.x >= this.x ? 
+                                    ( rect.x < p2_self.x ? rect.x 
+                                                         : p2_self.x ) 
+                                                 : this.x,
+                                rect.y >= this.y ? 
+                                    ( rect.y < p2_self.y ? rect.y 
+                                                         : p2_self.y ) 
+                                                 : this.y );
+
+        auto p2 = vec!("xy",T)( p2_rect.x < p2_self.x ? 
+                                    ( p2_rect.x > this.x ? p2_rect.x 
+                                                         : this.x ) 
+                                                      : p2_self.x,
+                                p2_rect.y < p2_self.y ? 
+                                    ( p2_rect.y > this.y ? p2_rect.y 
+                                                         : this.y ) 
+                                                      : p2_self.y );
+
+        return  vrect!T( p1, p2 - p1 );
+
+        //auto buf = vrect!T( p1, p2 - p1 );
+        //buf.w = buf.w > 0 ? buf.w : 0;
+        //buf.h = buf.h > 0 ? buf.h : 0;
+        //return buf;
+    }
+}
+
+unittest
+{
+    alias vrect!int irect;
+
+    auto a = irect( -1,-1,8,4 );
+    {
+        auto b = irect( 1,1,6,2 );
+        auto c = a.overlap(b);
+        assert( b == c );
+    }
+    {
+        auto b = irect( -2, 1, 6, 2 );
+        auto c = a.overlap(b);
+        assert( c == irect( -1,1,5,2 ) );
+    }
+    {
+        auto b = irect( 1,1, 10, 2 );
+        auto c = a.overlap(b);
+        assert( c == irect( 1,1, 6, 2 ) );
+    }
+    {
+        auto b = irect( 2,1, 4,6 );
+        auto c = a.overlap(b);
+        assert( c == irect( 2,1, 4,2 ) );
     }
 }
 
