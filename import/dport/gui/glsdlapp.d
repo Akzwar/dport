@@ -271,7 +271,6 @@ private:
             case SDL_BUTTON_X2:     me.btn = MouseEvent.Button.X2; break;
             default: 
                 throw new GLSDLAppException( "Undefined mouse button: " ~ to!string( ev.button ) );
-                break;
         }
 
         vh.mouse( mpos, me );
