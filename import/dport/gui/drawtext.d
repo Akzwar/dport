@@ -88,7 +88,9 @@ static this() { DerelictFT.load(); }
 class FreeTypeRender: FontRender
 {
 private:
-    FT_Library ft;
+    static lib_inited = false;
+    static FT_Library ft;
+
     FT_Face face;
 
     /++
@@ -98,9 +100,13 @@ private:
      +/
     this( string fontname )
     {
-        if( FT_Init_FreeType( &ft ) )
-            throw new DTException( "Couldn't init freetype library" );
-        debug log.info( "lib loaded" );
+        if( !lib_inited )
+        {
+            if( FT_Init_FreeType( &ft ) )
+                throw new DTException( "Couldn't init freetype library" );
+            debug log.info( "lib loaded" );
+            lib_inited = true;
+        }
 
         if( FT_New_Face( ft, fontname.ptr, 0, &face ) )
             throw new DTException( "Couldn't open font \"" ~ fontname ~ "\"" );
@@ -152,8 +158,11 @@ public:
         debug log.Debug( "FreeTypeRender destructor start" );
         FT_Done_Face( face );
         debug log.info( "font done" );
-        FT_Done_FreeType( ft );
-        debug log.info( "lib done" );
+        if( lib_inited )
+        {
+            FT_Done_FreeType( ft );
+            debug log.info( "lib done" );
+        }
         debug log.Debug( "FreeTypeRender destructor end" );
     }
 }
@@ -182,8 +191,8 @@ private:
      +/
     void predraw()
     {
-        shader.setUniform!int( "use_texture", 1 );
-        shader.setUniform!int( "ttu", GL_TEXTURE0 );
+        info.shader.setUniform!int( "use_texture", 1 );
+        info.shader.setUniform!int( "ttu", GL_TEXTURE0 );
         tex.use();
     }
 
@@ -218,8 +227,8 @@ private:
             irect rr = r;
             if( center ) 
             {
-                rr.x = ( bbox.w - r.x - r.w ) / 2;
-                rr.y = cast(int)(bbox.h/2.0 + r.y - tp.height/3.0);
+                rr.x = ( rect.w - r.x - r.w ) / 2;
+                rr.y = cast(int)(rect.h/2.0 + r.y - tp.height/3.0);
             }
             bufferData( "crd", rr.points!float( vec2(0,0) ) );
         }
@@ -262,7 +271,6 @@ protected:
             if( max.x < v.x ) max.x = v.x;
             if( max.y < v.y ) max.y = v.y;
         }
-
 
         foreach( i, ch; tp.str )
         {
@@ -314,7 +322,7 @@ public:
         super( par );
         this.processEvent = 0;
 
-        dr = new _drawrect( this.shader );
+        dr = new _drawrect( this.info.shader );
         tex = new GLTexture2D( isize( 100, 10 ) );
 
         version(Windows) 

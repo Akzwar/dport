@@ -9,6 +9,9 @@ import dport.gui.base,
        dport.gui.element,
        dport.gui.drawtext;
 
+import dport.utils.system;
+mixin( defaultModuleLogUtils( "ButtonException" ) );
+
 interface ButtonDrawContent
 {
     void setRect( in irect r );
@@ -29,17 +32,20 @@ protected:
 
     bool prepare = 0;
 
-    void mouse_hook( in ivec2, in MouseEvent me )
+    void mouse_hook( in ivec2 p, in MouseEvent me )
     { 
         if( me.type == me.Type.RELEASED ) 
         {
-            if( prepare ) onClick(); 
+            if( prepare && p in drawRect )
+                onClick(); 
             prepare = 0;
+            grab = 0;
         }
         if( me.type == me.Type.PRESSED ) 
         {
             prepare = 1;
             onPress();
+            grab = 1;
         }
     }
 
@@ -52,7 +58,7 @@ protected:
             release.connect( &(elem.onRelease) );
             onClick.connect( &(elem.onClick) );
             onPress.connect( &(elem.onPress) );
-            elem.setRect( bbox );
+            elem.setRect( rect );
         }
     }
 
@@ -60,17 +66,19 @@ public:
     EmptySignal onClick;
     EmptySignal onPress;
 
-    this( Element par, in irect rect )
+    this( Element par, in irect r )
     {
         super( par );
 
-        bbox = rect;
+        rect = r;
         mouse.connect( &mouse_hook );
         reshape.connect( (r){ foreach( elem; content ) elem.setRect( r ); });
         draw.connect( (){ foreach( elem; content ) elem.onDraw(); } );
         idle.connect( (dtime){ foreach( elem; content ) elem.onIdle(dtime); }); 
         release.connect( (){ prepare = 0; } );
     }
+
+    ~this() { foreach( c; content ) clear( c ); }
 }
 
 class ButtonLabel: ButtonDrawContent
@@ -110,8 +118,8 @@ class ButtonShape: GLVAO, ButtonDrawContent
     static float[] coldata( in col4 c )
     { return c.data ~ c.data ~ c.data ~ c.data; }
 
-    auto not_active_col = col4( .3f, .3f, .3f, .8f );
-    auto is_active_col  = col4( .1f, .6f, .9f, .6f );
+    auto not_active_col = col4( .3f, .3f, .3f, .6f );
+    auto is_active_col  = col4( .1f, .6f, .9f, .8f );
     auto on_press_col   = col4( .8f, .7f, .1f, .9f );
 
     col4 curColor, lastColor;
@@ -155,14 +163,14 @@ class ButtonShape: GLVAO, ButtonDrawContent
 
 class SimpleButton: Button
 {
-    //ButtonLabel label;
     ButtonShape shape;
+    //ButtonLabel label;
 
     this( Element par, string font, in irect rect, wstring str=""w, void delegate() onclick=null )
     {
         super( par, rect );
 
-        shape = new ButtonShape( this.shader, rect );
+        shape = new ButtonShape( this.info.shader, rect );
         //label = new ButtonLabel( this, font, str, rect.h - 10 );
 
         content ~= shape;

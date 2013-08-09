@@ -2,8 +2,7 @@ module dport.gui.element;
 
 import derelict.opengl3.gl3;
 
-import dport.gl.shader,
-       dport.gl.object;
+import dport.gl.object;
 
 public import dport.gui.base;
 
@@ -69,81 +68,183 @@ void main(void)
 "
 };
 
+/++ информация переносимая от родителя потомкам +/
+class ElementInfo
+{
+    /++ шейдер +/
+    ShaderProgram shader;
+
+    /++ dpi for lenovo y580 +/
+    uint dpi = 141;
+
+    @property nothrow float mm2px_coef() const { return 0.0393700787f * dpi; }
+    nothrow int mm2px( float val ) const { return cast(int)( mm2px_coef * val ); }
+
+    this() { shader = new ShaderProgram( SS_ELEMENT ); }
+}
+
+interface Layout
+{
+    void opCall( irect, Element[] );
+}
+
 /++
  родоначальник gui элементов
  +/
 class Element: View
 {
 private:
-    /++ возвращает смещение от верхнего левого края +/
-    @property ivec2 offset() const
+
+    /++ информация может быть обновлена исключительно у элемента root +/
+    enum setInfoOnlyParent = false;
+    static if( setInfoOnlyParent ) { bool setInfoFlag = false; }
+
+    /++ обновляет информацию для себя и всех дочерних элементов +/
+    void setInfo( ElementInfo newInfo )
     {
-        if( parent )
-            return bbox.pos + parent.offset;
-        else return bbox.pos;
+        static if( setInfoOnlyParent )
+        {
+        if( !setInfoFlag && parent !is null ) 
+            throw new ElemException( "new info must set in parent" );
+        }
+        info = newInfo;
+        foreach( ch; childs )
+        {
+            static if( setInfoOnlyParent )
+            {
+            ch.setInfoFlag = true;
+            }
+            ch.updateInfo( newInfo );
+        }
+        static if( setInfoOnlyParent )
+        {
+        setInfoFlag = false;
+        }
     }
 
+    /++ смещение дочерних элементов относительно родительского элемента +/
+    @property ivec2 innerOffset() const { return rect.pos + inner; }
+
+    /++ смещение от верхнего левого края +/
+    @property ivec2 offset() const
+    {
+        if( parent ) return innerOffset + parent.offset;
+        else return innerOffset;
+    }
+
+    /++ полная высота окна +/
     @property int fullH() const 
     {
         if( parent ) return parent.fullH;
-        else return bbox.h;
+        else return rect.h;
     }
 
-    ivec2 localMouse( in ivec2 mpos ){ return mpos - bbox.pos; }
+    /++ перевод координат мыши в локальные для передачи в дочерние +/
+    ivec2 localMouse( in ivec2 mpos ){ return mpos - innerOffset; }
 
-    irect visrect;
+    /++ область отрисовки в координатах родительского +/
+    irect drawRegion;
 
+    /++ используется дочерними элементами для определения области отрисовки +/
     irect getVisible( in irect ch )
     {
         irect buf = ch;
-        buf.pos += bbox.pos;
-        auto ret = bbox.overlap( buf );
-        if( parent ) 
-            ret = parent.getVisible( ret );
-        ret.pos -= bbox.pos;
+        auto off = innerOffset;
+        buf.pos += off;
+        auto ret = drawRegion.overlap( buf );
+        ret.pos -= off;
         return ret;
     }
 
+    /++ выставляет viewport и scissor области +/
     void setView()
     { 
-        auto draw = bbox;  
-        auto view = bbox;
+        drawRegion = rect;
+
+        auto view = rect;
+        auto draw = rect;
+
         if( parent )
         {
-            view.pos += parent.offset;
-            draw = parent.getVisible( bbox );
-            draw.pos += parent.offset;
+            drawRegion = parent.getVisible( rect );
+
+            auto off = parent.offset;
+
+            view.pos += off;
+
+            draw = drawRegion;
+            draw.pos += off;
         }
-        visrect = draw;
+
         glViewport( view.x, fullH - (view.y + view.h), view.w, view.h ); 
         glScissor( draw.x, fullH - (draw.y + draw.h), draw.w, draw.h );
     }
 
+    /++ работа с шейдером и отключение проверки глубины +/
     void predraw()
     {
-        setView();
-
         glDisable( GL_DEPTH_TEST );
-        shader.setUniformVec( "winsize", vec2( bbox.size ) );
-        shader.setUniform!int( "use_texture", 0 );
-        shader.use();
+        info.shader.setUniformVec( "winsize", vec2( rect.size ) );
+        info.shader.setUniform!int( "use_texture", 0 );
+        info.shader.use();
     }
+
+    /++ захват фокуса +/
+    bool focus_grab = false;
+
+    /++ родитель удаляет из списка всех умерших детей +/
+    bool life = true;
+
 protected:
 
-    Element[] childs;
-    Element cur;
+    /++ самоликвидация +/
+    final void selfDestruction() { life = false; }
 
+    /++ обрабатывает ли элемент события +/
     bool processEvent = true;
 
+    /++ общая для всех элементов информация +/
+    ElementInfo info;
+
+    /++ родительский элемент +/
+    Element parent;
+
+    /++ список дочерних элементов +/
+    Element[] childs;
+
+    /++ текущий дочерний элемент +/
+    Element cur;
+
+    /++ workaround 1: в debug версии сбор мёртвых происходит сюда +/
+    debug static Element[] garbage;
+
+    /++ внутреннее смещение области для дочерних элементов +/
+    ivec2 inner = ivec2( 0,0 );
+
+    final @property bool grab() const { return focus_grab; }
+    final @property void grab( bool g )
+    {
+        focus_grab = g;
+        if( parent ) parent.grab = g;
+    }
+
+    /++ поиск дочернего элемента для передачи события +/
     bool find( in ivec2 mpos )
     {
-        foreach_reverse( v; childs )
+        /+ если фокус захвачен, поиск не производится +/
+        if( focus_grab ) return cast(bool)cur;
+
+        foreach( v; childs )
         {
-            if( v !is null && v.processEvent && v.visible && ( mpos in v.rect ) )
+            if( v !is null 
+                    && v.life 
+                    && v.processEvent 
+                    && v.visible 
+                    && ( mpos in v.activeArea ) )
             {
                 if( cur != v ) 
                 {
-                    if( cur )
+                    if( cur !is null )
                         cur.release();
                     cur = v;
                     cur.activate();
@@ -151,76 +252,110 @@ protected:
                 return true;
             }
         }
-        if( cur ) cur.release();
 
+        if( cur ) cur.release(); 
         cur = null;
+
         return false;
     }
 
-    ShaderProgram shader;
-    Element parent;
+    void add( Element e )
+    {
+        if( e == this ) throw new ElemException( "add this to this" );
+        childs ~= e;
+        e.updateInfo( info );
+        e.parent = this;
+    }
+
+    //void remove( Element e )
+    //{
+    //    foreach( i, ch; childs )
+    //    {
+    //        if( ch == e )
+    //        {
+    //            childs = childs[0 .. i] ~ ( i < childs.length ? childs[i+1 .. $] : [] );
+    //            break;
+    //        }
+    //    }
+    //}
 
 public:
+
     bool visible = true;
+
+    //void reparent( Element newParent )
+    //{
+    //    if( newParent == this ) 
+    //        throw new ElemException( "new parent from this is this" );
+    //    if( parent ) parent.remove( this );
+    //    newParent.add( this );
+    //}
+
+    @property irect drawRect() const { return drawRegion; }
+    @property irect activeArea() const { return rect; }
+
+    Signal!ElementInfo updateInfo;
+
+    //alias void delegate( irect, Element[] ) Layout;
+    Layout layout;
 
     this( Element par=null )
     {
         parent = par;
-        if( par ) 
-        {
-            shader = par.shader;
-            par.childs ~= this;
-        }
+        updateInfo.connect( &setInfo );
+
+        if( par ) par.add( this );
         else 
-            shader = new ShaderProgram( SS_ELEMENT );
+            info = new ElementInfo();
 
-        visrect = irect( 0,0, 1,1 );
-
-        draw.addPair( &predraw, (){ 
+        draw.addBegin( &setView );
+        draw.addBegin( &predraw );
+        draw.addEnd( (){ 
+                if( drawRegion.area <= 0 ) return;
                 foreach_reverse( ch; childs ) 
-                    if( ch.visible && ch.visrect.area > 0 ) 
+                    if( ch !is null && ch.visible ) 
                         ch.draw(); 
                 });
 
-        keyboard.addCondition( (mpos, key){ 
-                return find( localMouse( mpos ) ); 
-                }, 0 );
+        keyboard.addCondition( (mpos, key){ return find( localMouse( mpos ) ); }, false );
         keyboard.connectAlt( (mpos, key){
-                if( cur ) cur.keyboard( localMouse( mpos ), key );
+                if( cur !is null ) cur.keyboard( localMouse( mpos ), key );
                 });
 
-        mouse.addCondition( (mpos, me){ 
-                return find( localMouse( mpos ) ); 
-                }, 0 );
+        mouse.addCondition( (mpos, me){ return find( localMouse( mpos ) ); }, false );
         mouse.connectAlt( (mpos, me){
-                if( cur ) cur.mouse( localMouse( mpos ), me );
+                if( cur !is null ) cur.mouse( localMouse( mpos ), me );
                 });
 
-        joystick.addCondition( (mpos, je){
-                return find( localMouse( mpos ) );
-                }, 0 );
+        joystick.addCondition( (mpos, je){ return find( localMouse( mpos ) ); }, false );
         joystick.connectAlt( (mpos, je){
-                if( cur ) cur.joystick( localMouse( mpos ), je );
+                if( cur !is null ) cur.joystick( localMouse( mpos ), je );
                 });
 
-        release.connect( (){ if( cur ) cur.release(); } );
+        release.connect( (){ if( cur !is null ) cur.release(); } );
+        release.connect( (){ if( parent !is null ) parent.grab = false; } );
+        //if( parent )
+        //    release.connect( (){ parent.grab = false; } );
+
+        reshape.connect( (r){ if( layout !is null ) layout( r, childs ); } );
 
         idle.connect( ( dtime ) {
+            Element[] buf;
+            foreach( ch; childs ) 
+            {
+                if( ch is null ) continue;
+                if( ch.life ) buf ~= ch;
+                debug if( !ch.life ) garbage ~= ch;
+            }
+            childs = buf[];
+
             foreach( ch; childs ) ch.idle( dtime );
                 });
     }
 
     ~this()
     {
-        //if( parent )
-        //{
-        //    foreach( i, ch; parent.childs )
-        //        if( ch == this )
-        //        {
-        //            debug log.error( "OKDA" );
-        //            parent.childs = parent.childs[0 .. i] ~ ( i < parent.childs.length ?
-        //                                                parent.childs[i+1 .. $]:[] );
-        //        }
-        //}
+        foreach( ch; childs ) clear( ch );
+        debug foreach( g; garbage ) clear( g );
     }
 }
