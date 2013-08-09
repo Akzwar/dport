@@ -431,33 +431,33 @@ struct vrect(T)
     auto overlap(E)( in vrect!E rect ) const
         if( is( E : T ) )
     {
-        auto p2_self = this.pos + this.size;
-        auto p2_rect = rect.pos + rect.size;
+        auto test( in vec!("xy",E) p, in vec!("xy",T) lu, in vec!("xy",T) rd )
+        {
+            return vec!("xy",T)( p.x > lu.x ? ( p.x < rd.x ? p.x : rd.x ) : lu.x,
+                                 p.y > lu.y ? ( p.y < rd.y ? p.y : rd.y ) : lu.y );
+        }
 
-        auto p1 = vec!("xy",T)( rect.x >= this.x ? 
-                                    ( rect.x < p2_self.x ? rect.x 
-                                                         : p2_self.x ) 
-                                                 : this.x,
-                                rect.y >= this.y ? 
-                                    ( rect.y < p2_self.y ? rect.y 
-                                                         : p2_self.y ) 
-                                                 : this.y );
+        auto lu = this.pos;
+        auto rd = this.pos + this.size;
 
-        auto p2 = vec!("xy",T)( p2_rect.x < p2_self.x ? 
-                                    ( p2_rect.x > this.x ? p2_rect.x 
-                                                         : this.x ) 
-                                                      : p2_self.x,
-                                p2_rect.y < p2_self.y ? 
-                                    ( p2_rect.y > this.y ? p2_rect.y 
-                                                         : this.y ) 
-                                                      : p2_self.y );
+        auto p1 = test( rect.pos, lu, rd );
+        auto p2 = test( rect.pos + rect.size, lu, rd );
 
-        return  vrect!T( p1, p2 - p1 );
+        return vrect!T( p1, p2 - p1 );
+    }
 
-        //auto buf = vrect!T( p1, p2 - p1 );
-        //buf.w = buf.w > 0 ? buf.w : 0;
-        //buf.h = buf.h > 0 ? buf.h : 0;
-        //return buf;
+    auto overlapLocal(E)( in vrect!E r ) const
+    {
+        auto test( in vec!("xy",E) p )
+        {
+            return vec!("xy",T)( p.x > 0 ? ( p.x < this.w ? p.x : this.w ) : 0 ,
+                                 p.y > 0 ? ( p.y < this.h ? p.y : this.h ) : 0 );
+        }
+
+        auto p1 = test( r.pos );
+        auto p2 = test( r.pos + r.size );
+
+        return vrect!T( p1, p2 - p1 );
     }
 }
 
@@ -892,7 +892,7 @@ struct mat(size_t H, size_t W,dtype=float)
         }
     }
 
-    auto copy(size_t h, size_t w)( size_t sh=0, size_t sw=0 ) const
+    @property auto copy(size_t h, size_t w)( size_t sh=0, size_t sw=0 ) const
     {
         mat!(h,w,dtype) ret;
 
