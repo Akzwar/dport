@@ -141,7 +141,7 @@ class EventProc
  +/
 abstract class View: EventProc
 {
-protected:
+private:
     /++ ограничивающий прямоугольник +/
     irect bbox; 
 public:
@@ -156,7 +156,7 @@ public:
     final @property
     {
         /++ возвращает копию прямоугольника +/
-        irect rect() const { return bbox; }
+        nothrow irect rect() const { return bbox; }
 
         /++ вызывает сигнал reshape +/
         void rect( in irect r ) { reshape( r ); }
