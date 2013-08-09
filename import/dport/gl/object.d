@@ -7,7 +7,7 @@ import dport.math.types;
 import dport.utils.system;
 import dport.utils.signal;
 
-import dport.gl.shader;
+public import dport.gl.shader;
 
 mixin( defaultModuleLogUtils("OBJException") );
 
@@ -49,7 +49,7 @@ protected:
         vbo[name] = buffer( 0, type );
         glGenBuffers( 1, &(vbo[name].no) );
 
-        debug log.info( "generate buffer \"", name, "\"" );
+        debug log.Debug( "generate buffer \"", name, "\"" );
     }
 
     final void bind( string name ) 
@@ -144,7 +144,7 @@ protected:
         glEnableVertexAttribArray( atLoc );
         glVertexAttribPointer( atLoc, cast(int)size, type, norm, 
                 cast(int)stride, cast(void*)offset );
-        debug log.info( "set \"", name, "\" attrib pointer at loc: ", atLoc, ", size: ", size, 
+        debug log.Debug( "set \"", name, "\" attrib pointer at loc: ", atLoc, ", size: ", size, 
                        ", type: ", type, ", norm: ", norm,  
                        ", stride: ", stride, ", offset: ", offset, " [success]" );
     }
@@ -155,7 +155,7 @@ public:
         shader = sh;
         glGenVertexArrays( 1, &selfNo ); 
         draw.addPair( &predraw_hook_base, &postdraw_hook_base );
-        debug log.info( "create vao: ", selfNo, " [success]" );
+        debug log.Debug( "create vao: ", selfNo, " [success]" );
     }
 
     ~this()
@@ -168,7 +168,7 @@ public:
         }
         use(0);
         glDeleteVertexArrays( 1, &selfNo );
-        debug log.info( "object destruction [success]" );
+        debug log.Debug( "object destruction [success]" );
     }
 
     alias const ref mat4 in_mat4;

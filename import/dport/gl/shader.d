@@ -50,7 +50,7 @@ private:
             }
         }
 
-        debug log.info( "makeShader: ", shader, " success" );
+        debug log.Debug( "makeShader: ", shader, " success" );
         return shader;
     }
 
@@ -68,7 +68,7 @@ private:
         glDeleteShader( frag_sh );
         if( geom_sh ) glDeleteShader( geom_sh );
         glDeleteShader( vert_sh );
-        debug log.info( "destroy success" );
+        debug log.Debug( "destroy success" );
     }
 
     static void checkProgram( GLuint prog )
@@ -87,7 +87,7 @@ private:
                 throw new ShaderException( "program link error: \n" ~ chlog.idup );
             }
         }
-        debug log.info( "checkProgram ", prog, " success" );
+        debug log.Debug( "checkProgram ", prog, " success" );
     }
 
     void checkLoc( int loc )
@@ -99,18 +99,18 @@ private:
 public:
     this( in ShaderSources src )
     {
-        debug log.info( "shader ctor start" );
+        debug log.Debug( "shader ctor start" );
         if( src.vert.length == 0 || src.frag.length == 0 )
             throw new ShaderException( "source is empty" );
 
         program = glCreateProgram();
-        debug log.info( "create program: ", program );
+        debug log.Debug( "create program: ", program );
 
         vert_sh = makeShader( GL_VERTEX_SHADER, src.vert );
         if( src.geom.length )
         {
             geom_sh = makeShader( GL_GEOMETRY_SHADER, src.frag );
-            debug log.info( "use geom shader" );
+            debug log.Debug( "use geom shader" );
         }
         frag_sh = makeShader( GL_FRAGMENT_SHADER, src.frag );
 
@@ -121,7 +121,7 @@ public:
 
         glLinkProgram( program );
         checkProgram( program );
-        debug log.info( "shader construction success" );
+        debug log.Debug( "shader construction success" );
     }
 
     ~this(){ destroy(); }
