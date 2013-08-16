@@ -136,6 +136,31 @@ class EventProc
     EmptySignal release;       
 }
 
+import std.traits;
+
+/++ структура для хранения пределов +/
+struct lim_t(T) if( isNumeric!T )
+{
+    T min=T.min, max=T.max;
+    bool fix = false;
+    T opCall( T old, T nval ) const
+    {
+        if( fix ) return old;
+        return nval >= min ? ( nval < max ? nval : max ) : min;
+    }
+}
+
+/++ структура для хранения пределов размера +/
+struct size_lim_t(T) if( isNumeric!T )
+{
+    lim_t!T w, h;
+    auto opCall(string A, E, string B, G)( in vec!(A,E) old, in vec!(B,G) nval ) const
+        if( A.length == 2 && B.length == 2 && is( typeof( 1 ? E.init : G.init ) : T ) )
+    {
+        return vec!("wh",T)( w( old[0], nval[0] ), h( old[1], nval[1] ) );
+    }
+}
+
 /++
  базовый абстрактный класс для прямоугольных областей отрисовки
  +/
@@ -143,12 +168,33 @@ abstract class View: EventProc
 {
 private:
     /++ ограничивающий прямоугольник +/
-    irect bbox; 
+    irect bbox;
+protected:
+    /++ пределы для размера bbox +/
+    size_lim_t!int size_lim;
+
+    /++ принудительное изменение размера bbox, вне зависимости от фиксированности +/
+    final void forceReshape( in irect r )
+    {
+        bool fw = size_lim.w.fix;
+        bool fh = size_lim.h.fix;
+        size_lim.w.fix = false;
+        size_lim.h.fix = false;
+        reshape( r );
+        size_lim.w.fix = fw;
+        size_lim.h.fix = fh;
+    }
 public:
 
     /++ конструктор добавляет в reshape
         код, обновляющий bbox +/
-    this() { reshape.connect( (r){ bbox = r; } ); }
+    this() 
+    { 
+        reshape.connect( (r) { 
+                bbox.pos = r.pos;
+                bbox.size = size_lim( bbox.size, r.size );
+                } ); 
+    }
 
     /++ деструктор вызывает сигнал release +/
     ~this() { release(); }
@@ -157,6 +203,8 @@ public:
     {
         /++ возвращает копию прямоугольника +/
         nothrow irect rect() const { return bbox; }
+        /++ возвращает копию пределов размера прямоугольника +/
+        nothrow size_lim_t!int lims() const { return size_lim; }
 
         /++ вызывает сигнал reshape +/
         void rect( in irect r ) { reshape( r ); }
