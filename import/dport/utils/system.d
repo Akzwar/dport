@@ -22,7 +22,7 @@ class SystemInfo
     { path = buildNormalizedPath( dirName( absolutePath( args[0] ) ), "." ); }
 
     string getPath( string file ) const
-    { return buildNormalizedPath( path, file ); }
+    { return buildNormalizedPath( path, file ).dup; }
 }
 
 SystemInfo sysinfo;
