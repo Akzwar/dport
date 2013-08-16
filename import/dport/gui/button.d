@@ -7,31 +7,17 @@ import dport.gl.shader,
 
 import dport.gui.base,
        dport.gui.element,
-       dport.gui.drawtext;
+       dport.gui.drawtext,
+       dport.gui.rshape;
 
 import dport.utils.system;
 mixin( defaultModuleLogUtils( "ButtonException" ) );
 
-interface ButtonDrawContent
-{
-    void setRect( in irect r );
-    void onDraw();
-    void onIdle( real dtime );
-
-    void onActive();
-    void onRelease();
-    void onClick();
-    void onPress();
-}
-
+    import std.stdio;
 abstract class Button: Element
 {
-protected:
-    /++ full in child classes +/
-    ButtonDrawContent[] content;
-
+private:
     bool prepare = 0;
-
     void mouse_hook( in ivec2 p, in MouseEvent me )
     { 
         if( me.type == me.Type.RELEASED ) 
@@ -44,24 +30,10 @@ protected:
         if( me.type == me.Type.PRESSED ) 
         {
             prepare = 1;
-            onPress();
             grab = 1;
+            onPress();
         }
     }
-
-    // call before add all elems to content list
-    void setUpContent()
-    {
-        foreach( i, elem; content )
-        {
-            activate.connect( &(elem.onActive) );
-            release.connect( &(elem.onRelease) );
-            onClick.connect( &(elem.onClick) );
-            onPress.connect( &(elem.onPress) );
-            elem.setRect( rect );
-        }
-    }
-
 public:
     EmptySignal onClick;
     EmptySignal onPress;
@@ -70,120 +42,69 @@ public:
     {
         super( par );
 
-        rect = r;
         mouse.connect( &mouse_hook );
-        reshape.connect( (r){ foreach( elem; content ) elem.setRect( r ); });
-        draw.connect( (){ foreach( elem; content ) elem.onDraw(); } );
-        idle.connect( (dtime){ foreach( elem; content ) elem.onIdle(dtime); }); 
         release.connect( (){ prepare = 0; } );
-    }
-
-    ~this() { foreach( c; content ) clear( c ); }
-}
-
-//class ButtonLabel: ButtonDrawContent
-//{
-//    TextString label;
-//    this( Element parent, string font, wstring text, uint h=14 )
-//    {
-//        label = new TextString( parent, font );
-//        label.setTextParam( TextParam( text, h ), 1 );
-//    }
-//
-//    void setText( wstring text )
-//    {
-//        label.setTextParam( TextParam( text ), 1 );
-//    }
-//
-//    override // ButtonDrawContent
-//    {
-//        void setRect( in irect r ) { label.reshape( irect( 0, 0, r.w, r.h ) ); }
-//
-//        void onDraw() { /+label.draw();+/ }
-//        void onIdle( real dtime ){ }
-//
-//        void onActive() { }
-//        void onRelease() { }
-//
-//        void onPress() { }
-//        void onClick() { }
-//    }
-//}
-
-class ButtonShape: GLVAO, ButtonDrawContent
-{
-    static float[] posdata( in irect r )
-    { return [ 0.0f, 0, 0, r.h, r.w, 0, r.w, r.h ]; }
-
-    static float[] coldata( in col4 c )
-    { return c.data ~ c.data ~ c.data ~ c.data; }
-
-    auto not_active_col = col4( .3f, .3f, .3f, .6f );
-    auto is_active_col  = col4( .1f, .6f, .9f, .8f );
-    auto on_press_col   = col4( .8f, .7f, .1f, .9f );
-
-    col4 curColor, lastColor;
-    real speed = 10;
-
-    this( ShaderProgram sh, in irect rect )
-    {
-        super( sh );
-
-        genBufferWithData( "pos", posdata( rect ) );
-        setAttribPointer( "pos", "vertex", 2, GL_FLOAT );
-
-        genBufferWithData( "col", coldata( not_active_col ) );
-        curColor = not_active_col;
-        lastColor = not_active_col;
-        setAttribPointer( "col", "color", 4, GL_FLOAT );
-
-        draw.connect( (mtr){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
-    }
-
-    override // ButtonDrawContent
-    {
-        void setRect( in irect r ) { bufferData( "pos", posdata( r ) ); }
-
-        void onDraw() { draw( mat4() ); }
-
-        void onIdle( real dtime ) 
-        { 
-            while( dtime * speed > 1.0 ) speed -= 5;
-            lastColor += ( curColor - lastColor ) * speed * dtime;
-            bufferData( "col", coldata( lastColor ) );
-        }
-
-        void onActive() { curColor = is_active_col; speed = 15; }
-        void onRelease() { curColor = not_active_col; speed = 5; }
-
-        void onPress() { curColor = on_press_col; speed = 250; }
-        void onClick() { curColor = is_active_col; speed = 5; }
+        reshape( r );
     }
 }
 
 class SimpleButton: Button
 {
-    ButtonShape shape;
-    //ButtonLabel label;
+    col4[string] color_sheme;
+    col4 curColor, nColor;
+    float speed = 10;
 
-    this( Element par, string font, in irect rect, wstring str=""w, void delegate() onclick=null )
+    RShape shape;
+    TextElement label;
+
+    this( Element par, string font, in irect r, wstring str=""w, void delegate() onclick=null )
     {
-        super( par, rect );
+        super( par, r );
 
-        shape = new ButtonShape( this.info.shader, rect );
-        //label = new ButtonLabel( this, font, str, rect.h - 10 );
+        shape = new RShape( this.info.shader );
+        shape.notUseTexture();
+        draw.connect( (){ shape.draw( mat4() ); } );
 
-        content ~= shape;
-        //content ~= label;
+        label = new TextElement( this, font, false );
+        label.textAlign = TextElement.TextAlign.CENTER;
+        label.setTextData( TextData( str, r.h / 3 * 2 ) );
+        label.baseLine = cast(int)(r.h * 0.7);
 
-        setUpContent();
+        reshape.connect( (r){ 
+                auto inrect = irect( 0, 0, r.w, r.h );
+                shape.reshape( inrect ); 
+                label.reshape( inrect );
+                } );
 
         if( onclick !is null )
             onClick.connect( onclick );
+
+        color_sheme = [
+            "default": col4( .3f, .3f, .3f, .6f ),
+            "active":  col4( .1f, .6f, .9f, .8f ),
+            "press":   col4( .8f, .7f, .1f, .9f ),
+        ];
+
+        curColor = color_sheme["default"];
+        nColor = color_sheme["default"];
+
+        idle.connect( (dt){
+            if( dt * speed > 1.0 ) speed = 1.0 / dt;
+            curColor += ( nColor - curColor ) * speed * dt;
+            shape.setColor( curColor );
+                } );
+
+        activate.connect( (){ nColor = color_sheme["active"]; speed = 15; } );
+        release.connect( (){ nColor = color_sheme["default"]; speed = 5; } );
+
+        onPress.connect( (){ nColor = color_sheme["press"]; speed = 250; } );
+        onClick.connect( (){ nColor = color_sheme["active"]; speed = 5;} );
+
+        reshape( rect );
     }
 
     void setLabel( wstring str )
-    {
-        //label.setText( str );
+    { 
+        label.setTextData( TextData( str, rect.h / 3 * 2 ) ); 
     }
 }
