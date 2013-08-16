@@ -32,6 +32,8 @@ struct GlyphInfo
     ivec2 next; 
     /++ пиксельная информация +/
     ubyte[] buffer; 
+
+    this(this) { buffer = buffer.dup; }
 }
 
 /++
@@ -241,7 +243,8 @@ class LineTextRender
 
 struct TextRShape
 {
-    GlyphInfo glyph;
+    irect rect;
+    ivec2 next;
     RShape plane;
     TextData text;
 }
@@ -259,31 +262,50 @@ protected:
 
     int baseline;
 
-    void update()
+    ivec2 oldsize;
+
+    void updateText()
     {
-        ivec2 offset = ivec2(0,baseline);
-        foreach( v; trs ) 
-        { with( v ) {
-            glyph = ltr( fr, text );
-            plane.fillTexture( glyph.rect.size, glyph.buffer );
-            plane.reshape( irect( glyph.rect.pos + offset, glyph.rect.size ) );
-            plane.setColor( v.text.color );
-            offset += glyph.next;
-        } }
+        foreach( ref v; trs ) 
+        { 
+            auto g = ltr( fr, v.text );
+            v.rect = g.rect;
+            v.next = g.next;
+            v.plane.fillTexture( g.rect.size, g.buffer );
+        }
+        debug log.Debug( "update text" );
+        
+        updateNoRender();
     }
 
     void updateNoRender()
     {
-        ivec2 offset = ivec2(0,baseline);
-        foreach( v; trs ) 
-        { with( v ) {
-            plane.reshape( irect( glyph.rect.pos + offset, glyph.rect.size ) );
-            plane.setColor( v.text.color );
-            offset += glyph.next;
-        } }
+        int hoffset = 0;
+        if( textalign != TextAlign.LEFT )
+        {
+            int sum = 0;
+            foreach( v; trs )
+                sum += v.next.x;
+            hoffset = ( textalign == TextAlign.RIGHT ) ? 
+                rect.w - sum:
+                (rect.w - sum) / 2;
+        }
+        ivec2 offset = ivec2(hoffset,baseline);
+        foreach( ref v; trs ) 
+        { 
+            v.plane.reshape( irect( v.rect.pos + offset, v.rect.size ) );
+            v.plane.setColor( v.text.color );
+            offset += v.next;
+        }
+
+        debug log.Debug( "update no render" );
     }
 
+    TextAlign textalign = TextAlign.LEFT;
+
 public:
+
+    enum TextAlign { LEFT, CENTER, RIGHT };
 
     /++
         конструктор 
@@ -292,7 +314,7 @@ public:
         sp = шейдер, предположительно единый для всего gui-текста
         fontname = имя шрифта
      +/
-    this( Element par, string fontname )
+    this( Element par, string fontname, bool procEv=false )
     {
         super( par );
 
@@ -314,19 +336,37 @@ public:
                     v.plane.draw( mat4() ); 
                 } );
 
-        reshape.connect( (r){ update(); } );
+        reshape.connect( (r){ 
+                if( r.size.x != oldsize.x ||
+                    r.size.y != oldsize.y )
+                {
+                    updateNoRender(); 
+                    oldsize = r.size;
+                }
+                } );
 
         baseline = cast(int)(rect.h * 0.8);
+
+        processEvent = procEv;
 
         debug log.info( "TextString create" );
     }
 
     @property void baseLine( int bl )
     { 
+        debug log.Debug( "change baseline: ", baseline, " -> ", bl );
         baseline = bl; 
         updateNoRender();
     }
     @property int baseLine() const { return baseline; }
+
+    @property void textAlign( TextAlign ta )
+    {
+        debug log.Debug( "change text align: ", textalign, " -> ", ta );
+        textalign = ta;
+        updateNoRender();
+    }
+    @property TextAlign textAlign() const { return textalign; }
 
     void setTextData( in TextData[] td... )
     {
@@ -338,6 +378,7 @@ public:
                 trs[i].plane = new RShape( info.shader );
         }
 
-        update();
+        updateText();
+        debug log.info( "SetText: ", td );
     }
 }
