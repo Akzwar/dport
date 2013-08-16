@@ -13,23 +13,25 @@ import dport.gl.object;
 import dport.gl.texture;
 
 import dport.gui.element;
+import dport.gui.rshape;
 
 import std.string;
 
 mixin( defaultModuleLogUtils("DTException") );
 
-alias vrect!int irect; /// прямоугольник целочисленный
 alias vrect!float frect; /// прямоугольник плавающеточечный
-alias GLTexture!2 GLTexture2D; /// текстура двумерная
 
 /++
 содержит информацию о отрендеренном символе
  +/
 struct GlyphInfo
 {
-    irect rect; /// размер изображения символа
-    ivec2 next; /// смещение для следующего изображения
-    ubyte[] buffer; /// пиксельная информация
+    /++ размер изображения символа +/
+    irect rect; 
+    /++ смещение для следующего изображения +/
+    ivec2 next; 
+    /++ пиксельная информация +/
+    ubyte[] buffer; 
 }
 
 /++
@@ -49,6 +51,8 @@ interface FontRender
         Returns: структура с информацией о отрендеренном символе
      +/
     GlyphInfo renderChar( size_t ch );
+    /++ baseline-to-baseline height +/
+    @property uint baseLineHeight();
 }
 
 version(Windows)
@@ -59,20 +63,10 @@ static assert( 0, "no realisation of FontRender for windows" );
 class WindowsTypeRender: FontRender
 {
 public:
-    this( string fontname )
-    {
-
-    }
-
-    override void setSize( uint sz )
-    {
-
-    }
-
-    override GlyphInfo renderChar( size_t ch )
-    {
-
-    }
+    this( string fontname ) { } 
+    override void setSize( uint sz ) { } 
+    override GlyphInfo renderChar( size_t ch ) { }
+    @property uint baseLineHeight() { }
 }
 
 } else {
@@ -144,7 +138,7 @@ public:
         auto g = face.glyph;
         
         debug log.trace( "bitmap size: ", g.bitmap.width, "x", g.bitmap.rows );
-        auto ret = GlyphInfo( irect( g.bitmap_left, g.bitmap_top, 
+        auto ret = GlyphInfo( irect( g.bitmap_left, -g.bitmap_top, 
                 g.bitmap.width, g.bitmap.rows ),
                 ivec2( cast(int)(g.advance.x >> 6), cast(int)(g.advance.y >> 6) ) );
         ret.buffer.length = ret.rect.w * ret.rect.h;
@@ -152,6 +146,8 @@ public:
                 buf = g.bitmap.buffer[i];
         return ret;
     }
+
+    @property override uint baseLineHeight() { return face.height; }
 
     ~this()
     {
@@ -172,90 +168,24 @@ public:
 /++
  информация об отрисовываемом текте
  +/
-struct TextParam
+struct TextData
 {
     wstring str=""; /// как таковой текст
     uint height=12; /// высота шрифта
     col4 color=col4(1,1,1,1); /// цвет
-    vec2 pos=vec2(0,0); /// позиция, согласно шейдеру, в оконных координатах
+    ivec2 pos=ivec2(0,0); /// позиция, согласно шейдеру, в оконных координатах
 }
 
-/++
- отрисовка строки текста
- +/
-class TextString: Element
+class LineTextRender
 {
-private:
-    /++ 
-        выставляет в шейдере uniform текстуру и флаг использования 1
-     +/
-    void predraw()
+    GlyphInfo opCall( FontRender fr, in TextData td )
     {
-        info.shader.setUniform!int( "use_texture", 1 );
-        info.shader.setUniform!int( "ttu", GL_TEXTURE0 );
-        tex.use();
-    }
-
-    class _drawrect: GLVAO
-    {
-        static float[] vecToArray(string S,T)( vec!(S,T)[] arr, ulong count=4 ) 
-        {
-            float[] ret;
-            foreach( i; 0 .. count ) ret ~= arr[i%arr.length].data;
-            return ret;
-        }
-
-        this( ShaderProgram sp )
-        {
-            super( sp );
-            genBufferWithData( "crd", [ 0,  0, 100, 0, 0, 10, 100, 10 ] );
-            setAttribPointer( "crd", "vertex", 2, GL_FLOAT );
-
-            genBufferWithData( "clr", vecToArray( [col4( 1.0, 1.0, 1.0, 1.0 )] ) );
-            setAttribPointer( "clr", "color", 4, GL_FLOAT );
-
-            //genBufferWithData( "uv", [ 0.0f,  0, 1,  0,  0,  1, 1, 1 ] );
-            genBufferWithData( "uv", [ 0.0f,  1, 1,  1,  0,  0, 1, 0 ] );
-            setAttribPointer( "uv", "uv", 2, GL_FLOAT );
-
-            this.draw.connect( (mtr){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
-        }
-
-        void setColor( in col4 c ) { bufferData( "clr", vecToArray( [c] ) ); }
-        void reshape( in irect r ) 
-        { 
-            irect rr = r;
-            if( center ) 
-            {
-                rr.x = ( rect.w - r.x - r.w ) / 2;
-                rr.y = cast(int)(rect.h/2.0 + r.y - tp.height/3.0);
-            }
-            bufferData( "crd", rr.points!float( vec2(0,0) ) );
-        }
-    }
-
-    _drawrect dr;
-
-protected:
-
-    GLTexture2D tex;
-    FontRender fr;
-    TextParam tp;
-    bool center = 0;
-
-    /++ рендерит текст, обновляет текстуру и boundingbox (bbox) +/
-    void update()
-    { 
-        /+ fix redraw buf +/
-        GlyphInfo resbuf;
-        resbuf.rect = irect(0,0,1,1);
+        GlyphInfo res;
         res.buffer.length = 1;
-        fillTexture( resbuf );
+        res.rect = irect( 0, 0, 1, 1 );
+        if( td.str == "" ) return res;
 
-        /+ fix empty str exception +/
-        if( tp.str == "" ) return;
-
-        uint th = tp.height;
+        uint th = td.height;
         fr.setSize( th );
         auto pen = ivec2( 0, 0 );
 
@@ -264,48 +194,93 @@ protected:
         auto min = ivec2( 32000, 32000 );
         auto max = ivec2( -32000, -32000 );
 
-        void findminmax( in ivec2 v )
+        void findminmax( in irect r )
         {
-            if( min.x > v.x ) min.x = v.x;
-            if( min.y > v.y ) min.y = v.y;
-            if( max.x < v.x ) max.x = v.x;
-            if( max.y < v.y ) max.y = v.y;
+            if( min.x > r.pos.x ) min.x = r.pos.x;
+            auto b = r.size.x + r.pos.x;
+            if( max.x < b ) max.x = b;
+            if( min.y > r.pos.y ) min.y = r.pos.y;
+            b = r.size.y + r.pos.y;
+            if( max.y < b ) max.y = b;
         }
 
-        foreach( i, ch; tp.str )
+        foreach( i, ch; td.str )
         {
             auto g = fr.renderChar( ch );
             g.rect.pt[0] += pen;
             pen += g.next;
             buf ~= g;
 
-            findminmax( g.rect.pt[0] );
-            findminmax( g.rect.pt[0] + ivec2( g.rect.w, -g.rect.h ) );
+            findminmax( g.rect );
         }
 
         res.rect = irect( min, max - min );
         res.buffer.length = res.rect.w * res.rect.h;
 
+        int xx, yy, grw, grh, grwr, hi, rrw = res.rect.w;
         foreach( g; buf )
         {
-            auto yy = res.rect.h - ( g.rect.y - min.y );
-            auto xx = g.rect.x - min.x;
-            foreach( r; 0 .. g.rect.h )
-                foreach( v; 0 .. g.rect.w )
-                {
-                    size_t index = (yy + r) * res.rect.w + xx + v;
-                    res.buffer[ index ] = g.buffer[ r * g.rect.w + v ];
-                }
+            xx = g.rect.x - min.x;
+            yy = g.rect.y - min.y;
+            grw = g.rect.w;
+            grh = g.rect.h;
+            foreach( r; 0 .. grh )
+            {
+                grwr = grw * r;
+                hi = ( yy + r ) * rrw + xx;
+                foreach( v; 0 .. grw )
+                    res.buffer[ hi + v ] = g.buffer[ grwr + v ];
+            }
+            res.next += g.next;
         }
-        fillTexture( res );
-        dr.setColor( tp.color );
-    }
-    GlyphInfo res;
+        res.rect.pt[0] += td.pos;
 
-    void fillTexture( GlyphInfo g )
+        return res;
+    }
+}
+
+struct TextRShape
+{
+    GlyphInfo glyph;
+    RShape plane;
+    TextData text;
+}
+
+/++
+ отрисовка текста
+ +/
+class TextElement: Element
+{
+protected:
+    TextRShape[] trs;
+    FontRender fr;
+
+    LineTextRender ltr;
+
+    int baseline;
+
+    void update()
     {
-        tex.image( GL_ALPHA, isize( g.rect.w, g.rect.h ), GL_ALPHA,
-                GL_UNSIGNED_BYTE, g.buffer.ptr );
+        ivec2 offset = ivec2(0,baseline);
+        foreach( v; trs ) 
+        { with( v ) {
+            glyph = ltr( fr, text );
+            plane.fillTexture( glyph.rect.size, glyph.buffer );
+            plane.reshape( irect( glyph.rect.pos + offset, glyph.rect.size ) );
+            plane.setColor( v.text.color );
+            offset += glyph.next;
+        } }
+    }
+
+    void updateNoRender()
+    {
+        ivec2 offset = ivec2(0,baseline);
+        foreach( v; trs ) 
+        { with( v ) {
+            plane.reshape( irect( glyph.rect.pos + offset, glyph.rect.size ) );
+            plane.setColor( v.text.color );
+            offset += glyph.next;
+        } }
     }
 
 public:
@@ -320,10 +295,6 @@ public:
     this( Element par, string fontname )
     {
         super( par );
-        this.processEvent = 0;
-
-        dr = new _drawrect( this.info.shader );
-        tex = new GLTexture2D( isize( 100, 10 ) );
 
         version(Windows) 
         { 
@@ -333,94 +304,40 @@ public:
         else
         {
             debug log.info( "use FreeType" );
-            fr = FreeTypeRender.get( fontname.idup );
+            fr = FreeTypeRender.get( fontname );
         }
 
-        draw.addPair( &predraw, (){ tex.use(0); } );
-        draw.addBegin( (){ dr.reshape( res.rect ); } );
-        draw.connect( (){ dr.draw.opCall( mat4() ); } );
+        ltr = new LineTextRender();
+
+        draw.connect( (){ 
+                foreach( v; trs )
+                    v.plane.draw( mat4() ); 
+                } );
+
+        reshape.connect( (r){ update(); } );
+
+        baseline = cast(int)(rect.h * 0.8);
 
         debug log.info( "TextString create" );
     }
 
-    /++ выставляет новые параметры текста +/
-    final void setTextParam( in TextParam ntp, bool align_center=0 )
+    @property void baseLine( int bl )
     { 
-        tp = ntp; 
-        center = align_center;
-        update();
+        baseline = bl; 
+        updateNoRender();
     }
-}
+    @property int baseLine() const { return baseline; }
 
-/++
- отрисовка текста
- TODO: дополнить различными рюшечками
- +/
-class Text: Element
-{
-private:
-    TextString[] strs;
-
-    TextParam tp;
-    bool center;
-    string fontname;
-
-    void update()
+    void setTextData( in TextData[] td... )
     {
-        auto sp = splitLines( tp.str );
-        while( sp.length > strs.length )
-            strs ~= new TextString( this, fontname );
-        
-        //while( sp.length < strs.length )
-        //{
-        //    clear( strs[$-1] );
-        //    strs = strs[0 .. $-1];
-        //}
-
-        int k = 0;
-        foreach( i, s; sp )
+        trs.length = td.length;
+        foreach( i, v; td )
         {
-            auto ptp = tp;
-            ptp.str = s;
-            strs[i].setTextParam( ptp, center );
-            k = cast(int)(i * tp.height * 1.5);
-            strs[i].reshape( irect( 0, k, strs[i].res.rect.w, strs[i].res.rect.h ) );
-        }
-    }
-
-public:
-
-    /++
-        конструктор 
-
-        Params:
-        sp = шейдер, предположительно единый для всего gui-текста
-        fontname = имя шрифта
-     +/
-    this( Element par, string fname )
-    {
-        super( par );
-        this.processEvent = 0;
-
-        version(Windows) 
-        { 
-            debug log.info( "use WINDOWS_WTF" );
-        }
-        else
-        {
-            debug log.info( "use FreeType" );
-            FreeTypeRender.get( fname.idup );
+            trs[i].text = v;
+            if( trs[i].plane is null ) 
+                trs[i].plane = new RShape( info.shader );
         }
 
-        fontname = fname;
-    }
-
-    /++ выставляет новые параметры текста +/
-    final void setTextParam( in TextParam ntp, bool align_center=0 )
-    { 
-
-        tp = ntp; 
-        center = align_center;
         update();
     }
 }
