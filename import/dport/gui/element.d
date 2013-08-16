@@ -42,7 +42,7 @@ out vec4 ex_color;
 
 void main(void)
 {
-    gl_Position = vec4( 2.0 * vertex / winsize - vec2(1.0,1.0), -0.05, 1 );
+    gl_Position = vec4( 2.0 * vec2(vertex.x, -vertex.y) / winsize + vec2(-1.0,1.0), -0.05, 1 );
     ex_uv = uv;
     ex_color = color;
 }
@@ -61,7 +61,8 @@ void main(void)
     if( use_texture == 0 )
         gl_FragColor = ex_color; 
     else if( use_texture == 1 )
-        gl_FragColor = vec4( 1, 1, 1, texture2D( ttu, ex_uv ).a ) * ex_color;
+        //gl_FragColor = vec4( 1, 1, 1, texture2D( ttu, ex_uv ).r * 0.7 + 0.3 ) * ex_color;
+        gl_FragColor = vec4( 1, 1, 1, texture2D( ttu, ex_uv ).r ) * ex_color;
     else if( use_texture == 2 )
         gl_FragColor = texture2D( ttu, ex_uv );
 }
@@ -83,10 +84,8 @@ class ElementInfo
     this() { shader = new ShaderProgram( SS_ELEMENT ); }
 }
 
-interface Layout
-{
-    void opCall( irect, Element[] );
-}
+/++ интерфейс расскладки +/
+interface Layout { void opCall( irect, Element[] ); }
 
 /++
  родоначальник gui элементов
@@ -265,6 +264,7 @@ protected:
         childs ~= e;
         e.updateInfo( info );
         e.parent = this;
+        if( layout !is null ) layout( rect, childs );
     }
 
     //void remove( Element e )
@@ -343,10 +343,11 @@ public:
             Element[] buf;
             foreach( ch; childs ) 
             {
-                if( ch is null ) continue;
-                if( ch.life ) buf ~= ch;
-                debug if( !ch.life ) garbage ~= ch;
+                if( ch !is null && ch.life ) buf ~= ch;
+                debug if( ch is null || !ch.life ) garbage ~= ch;
             }
+            if( buf.length != childs.length && layout !is null )
+                layout( rect, buf );
             childs = buf[];
 
             foreach( ch; childs ) ch.idle( dtime );
