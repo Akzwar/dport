@@ -134,6 +134,8 @@ class EventProc
     EmptySignal activate;      
     /++ события вызываются при "деактивации" элемента +/
     EmptySignal release;       
+    /++ события вызываются при обновлении элемента, например смена языка +/
+    EmptySignal update;
 }
 
 import std.traits;
@@ -164,7 +166,7 @@ struct size_lim_t(T) if( isNumeric!T )
 /++
  базовый абстрактный класс для прямоугольных областей отрисовки
  +/
-abstract class View: EventProc
+abstract class BaseViewRect: EventProc
 {
 private:
     /++ ограничивающий прямоугольник +/
