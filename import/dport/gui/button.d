@@ -81,34 +81,34 @@ public:
     ~this() { foreach( c; content ) clear( c ); }
 }
 
-class ButtonLabel: ButtonDrawContent
-{
-    TextString label;
-    this( Element parent, string font, wstring text, uint h=14 )
-    {
-        label = new TextString( parent, font );
-        label.setTextParam( TextParam( text, h ), 1 );
-    }
-
-    void setText( wstring text )
-    {
-        label.setTextParam( TextParam( text ), 1 );
-    }
-
-    override // ButtonDrawContent
-    {
-        void setRect( in irect r ) { label.reshape( irect( 0, 0, r.w, r.h ) ); }
-
-        void onDraw() { /+label.draw();+/ }
-        void onIdle( real dtime ){ }
-
-        void onActive() { }
-        void onRelease() { }
-
-        void onPress() { }
-        void onClick() { }
-    }
-}
+//class ButtonLabel: ButtonDrawContent
+//{
+//    TextString label;
+//    this( Element parent, string font, wstring text, uint h=14 )
+//    {
+//        label = new TextString( parent, font );
+//        label.setTextParam( TextParam( text, h ), 1 );
+//    }
+//
+//    void setText( wstring text )
+//    {
+//        label.setTextParam( TextParam( text ), 1 );
+//    }
+//
+//    override // ButtonDrawContent
+//    {
+//        void setRect( in irect r ) { label.reshape( irect( 0, 0, r.w, r.h ) ); }
+//
+//        void onDraw() { /+label.draw();+/ }
+//        void onIdle( real dtime ){ }
+//
+//        void onActive() { }
+//        void onRelease() { }
+//
+//        void onPress() { }
+//        void onClick() { }
+//    }
+//}
 
 class ButtonShape: GLVAO, ButtonDrawContent
 {
