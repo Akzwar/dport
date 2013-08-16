@@ -35,7 +35,7 @@ final class GLSDLApp
 private:
     static GLSDLApp singleton;
 
-    View vh;
+    BaseViewRect vh;
 
     SDL_Window *window = null;
     SDL_GLContext context;
@@ -312,7 +312,7 @@ public:
         return singleton;
     }
 
-    void setView( View nv )
+    void setView( BaseViewRect nv )
     {
         if( vh !is null ) vh.release();
         vh = nv;
