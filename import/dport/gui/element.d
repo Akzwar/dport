@@ -61,7 +61,6 @@ void main(void)
     if( use_texture == 0 )
         gl_FragColor = ex_color; 
     else if( use_texture == 1 )
-        //gl_FragColor = vec4( 1, 1, 1, texture2D( ttu, ex_uv ).r * 0.7 + 0.3 ) * ex_color;
         gl_FragColor = vec4( 1, 1, 1, texture2D( ttu, ex_uv ).r ) * ex_color;
     else if( use_texture == 2 )
         gl_FragColor = texture2D( ttu, ex_uv );
@@ -75,13 +74,19 @@ class ElementInfo
     /++ шейдер +/
     ShaderProgram shader;
 
+    LangPack lpack;
+
     /++ dpi for lenovo y580 +/
     uint dpi = 141;
 
     @property nothrow float mm2px_coef() const { return 0.0393700787f * dpi; }
     nothrow int mm2px( float val ) const { return cast(int)( mm2px_coef * val ); }
 
-    this() { shader = new ShaderProgram( SS_ELEMENT ); }
+    this() 
+    { 
+        shader = new ShaderProgram( SS_ELEMENT );
+        lpack = new LangPack;
+    }
 }
 
 /++ интерфейс расскладки +/
@@ -90,7 +95,7 @@ interface Layout { void opCall( irect, Element[] ); }
 /++
  родоначальник gui элементов
  +/
-class Element: View
+class Element: BaseViewRect
 {
 private:
 
@@ -279,9 +284,12 @@ protected:
     //    }
     //}
 
+    bool is_visible = true;
+
 public:
 
-    bool visible = true;
+    @property nothrow bool visible() const { return is_visible; }
+    @property void visible( bool vis ) { is_visible = vis; if( !vis ) release(); }
 
     //void reparent( Element newParent )
     //{
@@ -302,11 +310,12 @@ public:
     this( Element par=null )
     {
         parent = par;
+
         updateInfo.connect( &setInfo );
+        updateInfo.connect( (ei){ update(); } );
 
         if( par ) par.add( this );
-        else 
-            info = new ElementInfo();
+        else info = new ElementInfo();
 
         draw.addBegin( &setView );
         draw.addBegin( &predraw );
@@ -339,12 +348,20 @@ public:
 
         reshape.connect( (r){ if( layout !is null ) layout( r, childs ); } );
 
+        update.connect( (){ foreach( ch; childs ) ch.update(); } );
+
         idle.connect( ( dtime ) {
             Element[] buf;
             foreach( ch; childs ) 
             {
                 if( ch !is null && ch.life ) buf ~= ch;
-                debug if( ch is null || !ch.life ) garbage ~= ch;
+                debug { 
+                    if( ch is null || !ch.life ) 
+                    {
+                        garbage ~= ch;
+                        ch.parent = null;
+                    }
+                }
             }
             if( buf.length != childs.length && layout !is null )
                 layout( rect, buf );
