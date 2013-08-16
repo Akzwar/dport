@@ -3,7 +3,7 @@
  +/
 module dport.math.types;
 
-import std.math;
+import std.math, std.traits;
 
 version(unittest) { import std.stdio; }
 
@@ -98,7 +98,7 @@ private template isComp( string A, E, string B, T )
 { enum bool isComp = A.length == B.length && is( E : T ); }
 
 struct vec( string S, T=real )
-    if( CT_trueString(S) && is( T : real ) )
+    if( CT_trueString(S) && isNumeric!T )
 {
     T[S.length] data;
     alias vec!(S,T) stype;
@@ -157,7 +157,7 @@ struct vec( string S, T=real )
     }
 
     auto elem(string op, string G,E)( in vec!(G,E) b ) const
-        if( (op == "+" || op == "-" || op == "*" || op == "/" || op == "^^" ) &&
+        if( ( op == "*" || op == "/" || op == "^^" ) &&
                 isComp!(G,E,S,T) )
     {
         stype ret;
@@ -167,7 +167,7 @@ struct vec( string S, T=real )
     }
 
     auto elem(string op,E)( E b ) const
-        if( is( E :T ) )
+        if( is( typeof( mixin( "T.init" ~ op ~ "E.init" ) ) : T ) )
     {
         stype ret;
         foreach( i, ref val; ret.data )
@@ -215,10 +215,11 @@ struct vec( string S, T=real )
     { return (this = opBinary!op(b)); }
 
     auto opBinary(string op,string G,E)( in vec!(G,E) b ) const
-        if( is( typeof( data[0] * b.data[0] ) : T ) && 
-                isComp!(G,E,S,T) && op == "^" )
+        if( op == "^" && isNumeric!( typeof( T.init * E.init ) ) && 
+                isComp!(G,E,S,T) )
     {
-        T ret = 0;
+        alias typeof( T.init * E.init ) rtype;
+        rtype ret = 0;
         foreach( i, m; data )
             ret += m * b.data[i];
         return ret;
@@ -228,10 +229,18 @@ struct vec( string S, T=real )
     ref T opIndex( size_t i ){ return data[i]; }
     T opIndex( size_t i ) const { return data[i]; }
 
-    @property auto len2() const { return opBinary!"^"(this); }
-    @property auto len() const { return sqrt( cast(real)len2 ); }
-    static if( is( T == float ) || is( T == double ) || is( T == real ) )
-    @property auto e() const { return this / len; }
+    static if( isNumeric!T )
+    {
+        @property auto len2() const { return opBinary!"^"(this); }
+        @property auto len() const { return sqrt( cast(real)len2 ); }
+
+        static if( isFloatingPoint!T )
+        @property auto e() const { return this / len; }
+
+        bool opCast(E)() const
+            if( is( E == bool ) )
+        { return cast(bool)len2; }
+    }
 
     @property T[] dup() const { return data.dup; }
 
@@ -296,9 +305,6 @@ struct vec( string S, T=real )
         return true;
     }
 
-    bool opCast(E)() const
-        if( is( E == bool ) )
-    { return cast(bool)len2; }
 }
 
 unittest
@@ -419,13 +425,21 @@ struct vrect(T)
         return buf;
     }
 
-    F[] points(F,string G,E)( in vec!(G,E) offset = vec!("xy",T)(0,0) ) const
+    F[] points(F,string G,E)( in vec!(G,E) offset ) const
         if( ( is( E : T ) || is( T : E ) ) && ( is( T : F ) && is( E : F ) ) && G.length == 2 )
     {
-        return [ cast(F)( offset.data[0] + this.x ), offset.data[1] + this.y,
-                          offset.data[0] + this.x + this.w, offset.data[1] + this.y,
-                          offset.data[0] + this.x,   offset.data[1] + this.y + this.h,
-                          offset.data[0] + this.x + this.w, offset.data[1] + this.y + this.h ];
+        return [ cast(F)( offset[0] + this.x ),        offset[1] + this.y,
+                          offset[0] + this.x + this.w, offset[1] + this.y,
+                          offset[0] + this.x,          offset[1] + this.y + this.h,
+                          offset[0] + this.x + this.w, offset[1] + this.y + this.h ];
+    }
+
+    @property F[] points(F)() const
+        if( is( typeof( 1 ? T.init : F.init ) : F ) )
+    {
+        alias this t;
+        return [ cast(F)(t.x), t.y,       t.x+t.w, t.y,
+                         t.x,  t.y+t.h,   t.x+t.w, t.y+t.h ];
     }
 
     auto overlap(E)( in vrect!E rect ) const
@@ -1172,10 +1186,11 @@ struct tensor( size_t Dim, Type )
         data = b.data.dup;
     }
 
-    auto opAssign(self b)
+    self opAssign(self b)
     {
         dim = b.dim;
         data = b.data.dup;
+        return this;
     }
 
     auto opBinary(string op)( in self b ) const
