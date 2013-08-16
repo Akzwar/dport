@@ -45,11 +45,14 @@ public:
         draw.addPair( (mtr){ 
                 shader.setUniform!int( "use_texture", use_tex );
                 shader.setUniform!int( "ttu", GL_TEXTURE0 );
-                tex.use(); },
-                (mtr){ tex.use(0); } );
+                if( use_tex )
+                    tex.use(); 
+                },
+                (mtr){ if( use_tex ) tex.use(0); } );
     }
 
     void setColor( in col4 c ){ bufferData( "col", colArray( c ) ); }
+    void notUseTexture(){ use_tex = 0; }
     void fillTexture(string A)( in vec!(A,int) sz, ubyte[] data )
         if( A.length == 2 )
     { 
