@@ -91,7 +91,7 @@ public:
 
     @property final texsize size() const { return _size; }
 
-    final void image( int texformat, texsize sz, 
+    final void image(string A)( int texformat, in vec!(A,int) sz, 
             GLenum dataformat, GLenum datatype, void* dataptr )
     {
         _size = sz;
