@@ -9,6 +9,8 @@ public import dport.gui.base;
 import dport.utils.system;
 mixin( defaultModuleLogUtils("ElemException") );
 
+import dport.gui.langpack;
+
 import std.conv;
 
 /++
