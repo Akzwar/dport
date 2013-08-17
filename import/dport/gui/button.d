@@ -57,7 +57,7 @@ class SimpleButton: Button
     RShape shape;
     TextElement label;
 
-    this( Element par, string font, in irect r, wstring str=""w, void delegate() onclick=null )
+    this( Element par, in irect r, wstring str=""w, void delegate() onclick=null )
     {
         super( par, r );
 
@@ -65,7 +65,7 @@ class SimpleButton: Button
         shape.notUseTexture();
         draw.connect( (){ shape.draw( mat4() ); } );
 
-        label = new TextElement( this, font, false );
+        label = new TextElement( this, this.info.font, false );
         label.textAlign = TextElement.TextAlign.CENTER;
         label.setTextData( TextData( str, r.h / 3 * 2 ) );
         label.baseLine = cast(int)(r.h * 0.7);
@@ -106,5 +106,17 @@ class SimpleButton: Button
     void setLabel( wstring str )
     { 
         label.setTextData( TextData( str, rect.h / 3 * 2 ) ); 
+    }
+}
+
+class DataButton(T): SimpleButton
+{
+    T data;
+    Signal!T onClickData;
+
+    this( Element par, in irect r, wstring str, T indata )
+    {
+        data = indata;
+        super( par, r, str, (){ onClickData( data ); } );
     }
 }
