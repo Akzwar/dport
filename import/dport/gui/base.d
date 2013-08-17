@@ -107,7 +107,7 @@ alias IfListSignal!(in_ivec2, in_TextEvent ) IfTextSignal;
 alias IfListSignal!(in_ivec2, in_MouseEvent) IfMouseSignal;
 alias IfListSignal!(in_ivec2, in_JoyEvent) IfJoySignal;
 alias Signal!(in_irect) ReshapeSignal;
-alias Signal!(real) IdleSignal;
+alias Signal!(double) IdleSignal;
 
 /++
  класс-обработчик событий

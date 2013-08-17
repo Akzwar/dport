@@ -379,6 +379,6 @@ public:
         }
 
         updateText();
-        debug log.info( "SetText: ", td );
+        debug log.Debug( "SetText: ", td );
     }
 }

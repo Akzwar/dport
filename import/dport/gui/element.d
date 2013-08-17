@@ -76,7 +76,11 @@ class ElementInfo
     /++ шейдер +/
     ShaderProgram shader;
 
+    /++ языковые пакеты +/
     LangPack lpack;
+
+    /++ имя шрифта +/
+    string font;
 
     /++ dpi for lenovo y580 +/
     uint dpi = 141;
@@ -86,6 +90,7 @@ class ElementInfo
 
     this() 
     { 
+        font = sysinfo.getPath( "default.ttf" );
         shader = new ShaderProgram( SS_ELEMENT );
         lpack = new LangPack;
     }
