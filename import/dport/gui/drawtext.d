@@ -266,6 +266,8 @@ protected:
 
     void updateText()
     {
+        if( fr is null )
+            throw new DTException( "no font render: set font please" );
         foreach( ref v; trs ) 
         { 
             auto g = ltr( fr, v.text );
@@ -307,28 +309,9 @@ public:
 
     enum TextAlign { LEFT, CENTER, RIGHT };
 
-    /++
-        конструктор 
-
-        Params:
-        sp = шейдер, предположительно единый для всего gui-текста
-        fontname = имя шрифта
-     +/
-    this( Element par, string fontname, bool procEv=false )
+    this( Element par, bool procEv=false )
     {
         super( par );
-
-        version(Windows) 
-        { 
-            debug log.info( "use WINDOWS_WTF" );
-            fr = new WindowsTypeRender( fontname );
-        }
-        else
-        {
-            debug log.info( "use FreeType" );
-            fr = FreeTypeRender.get( fontname );
-        }
-
         ltr = new LineTextRender();
 
         draw.connect( (){ 
@@ -350,6 +333,27 @@ public:
         processEvent = procEv;
 
         debug log.info( "TextString create" );
+
+    }
+
+    this( Element par, string fontname, bool procEv=false )
+    {
+        this( par, procEv );
+        setFont( fontname );
+    }
+
+    void setFont( string fontname )
+    {
+        version(Windows) 
+        { 
+            debug log.info( "use WINDOWS_WTF" );
+            fr = new WindowsTypeRender( fontname );
+        }
+        else
+        {
+            debug log.info( "use FreeType" );
+            fr = FreeTypeRender.get( fontname );
+        }
     }
 
     @property void baseLine( int bl )
