@@ -5,6 +5,8 @@ import std.conv;
 import dport.utils.system;
 mixin( defaultModuleLogUtils( "LangPackException" ) );
 
+import std.string : toLower, toUpper;
+
 final class LangPack
 {
 private:
@@ -12,6 +14,8 @@ private:
 
 public:
     string cur = "en";
+    enum Reg { NOREG, LOWER, UPPER };
+    Reg reg = Reg.NOREG;
 
     this( in wstring[string][string] pack = null ) 
     { if( pack !is null ) setData(pack); }
@@ -35,7 +39,15 @@ public:
         if( tr !is null ) 
         {
             auto word = lang in *tr;
-            if( word ) return *word;
+            if( word ) 
+            {
+                final switch(reg)
+                {
+                    case Reg.NOREG: return *word; break;
+                    case Reg.LOWER: return (*word).toLower; break;
+                    case Reg.UPPER: return (*word).toUpper; break;
+                }
+            }
             else return to!wstring( "# no tr [" ~ lang ~ "]:[" ~ key ~ "]" );
         }
         else return to!wstring( "# no key [" ~ key ~ "]" );
