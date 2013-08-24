@@ -851,6 +851,16 @@ struct mat(size_t H, size_t W,dtype=float)
 
         static if( W == 3 )
         {
+
+            @property dtype det() const
+            {
+                alias this a;
+                return
+                 a[0,0] * (a[1,1]*a[2,2]-a[1,2]*a[2,1]) +
+                -a[0,1] * (a[1,0]*a[2,2]-a[1,2]*a[2,0]) +
+                 a[0,2] * (a[1,0]*a[2,1]-a[1,1]*a[2,0]);
+            }
+
             @property self true_inv() const
             {
                 alias this a;
@@ -1065,6 +1075,10 @@ unittest
                      1, 0, 3,
                      4, 5, 2 ] );
     test_mat3_inv( a );
+
+    assert( a.det == 2 * ( -15 ) 
+                   - 3 * ( 2 - 12 ) 
+                   + 8 * ( 5 ) );
 
     auto b = mat3( [ 0, 1, 0,
                      1, 0, 0,
