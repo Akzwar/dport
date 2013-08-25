@@ -39,13 +39,13 @@ public:
         if( tr !is null ) 
         {
             auto word = lang in *tr;
-            if( word ) 
+            if( word !is null ) 
             {
                 final switch(reg)
                 {
                     case Reg.NOREG: return *word; break;
-                    case Reg.LOWER: return (*word).toLower; break;
-                    case Reg.UPPER: return (*word).toUpper; break;
+                    case Reg.LOWER: return (*word).toLower(); break;
+                    case Reg.UPPER: return (*word).toUpper(); break;
                 }
             }
             else return to!wstring( "# no tr [" ~ lang ~ "]:[" ~ key ~ "]" );
