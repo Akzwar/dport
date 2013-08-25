@@ -11,7 +11,7 @@ public import dport.gl.shader;
 
 mixin( defaultModuleLogUtils("OBJException") );
 
-abstract class GLVAO
+abstract class GLVAO(Args...)
 {
 private:
     static uint _inUse = 0; // vertex array object in use
@@ -88,7 +88,7 @@ protected:
         bufferData( name, data, mem );
     }
 
-    final void predraw_hook_base( in mat4 mtr )
+    final void predraw_hook_base( Args data )
     {
         debug log.trace( "predraw start" );
         use();
@@ -103,7 +103,7 @@ protected:
         debug log.trace( "predraw success" );
     }
 
-    final void postdraw_hook_base( in mat4 mtr )
+    final void postdraw_hook_base( Args data )
     {
         debug log.trace( "postdraw start" );
         use(0);
@@ -171,6 +171,5 @@ public:
         debug log.Debug( "object destruction [success]" );
     }
 
-    alias const ref mat4 in_mat4;
-    SignalBox!in_mat4 draw;
+    SignalBox!Args draw;
 }
