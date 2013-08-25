@@ -48,7 +48,7 @@ private:
 
     this( string[] args )
     {
-        string joy_name = "";
+        string joy_name = "any";
         bool audioinit = false;
         bool resizable = false;
         string title = "work";
