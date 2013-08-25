@@ -63,7 +63,7 @@ class SimpleButton: Button
 
         shape = new RShape( this.info.shader );
         shape.notUseTexture();
-        draw.connect( (){ shape.draw( mat4() ); } );
+        draw.connect( &(shape.draw.opCall) );
 
         label = new TextElement( this, this.info.font, false );
         label.textAlign = TextElement.TextAlign.CENTER;

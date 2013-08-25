@@ -16,7 +16,7 @@ mixin( defaultModuleLogUtils( "RShapeException" ) );
 alias vrect!int irect;
 alias GLTexture!2 GLTexture2D;
 
-class RShape: GLVAO
+class RShape: GLVAO!()
 {
 protected:
     static float[] colArray( in col4 c )
@@ -41,14 +41,14 @@ public:
 
         tex = new GLTexture2D( isize( 1, 1 ) ); 
 
-        draw.connect( (mtr){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
-        draw.addPair( (mtr){ 
+        draw.connect( (){ glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ); } );
+        draw.addPair( (){ 
                 shader.setUniform!int( "use_texture", use_tex );
                 shader.setUniform!int( "ttu", GL_TEXTURE0 );
                 if( use_tex )
                     tex.use(); 
                 },
-                (mtr){ if( use_tex ) tex.use(0); } );
+                (){ if( use_tex ) tex.use(0); } );
     }
 
     void setColor( in col4 c ){ bufferData( "col", colArray( c ) ); }

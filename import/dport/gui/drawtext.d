@@ -316,7 +316,7 @@ public:
 
         draw.connect( (){ 
                 foreach( v; trs )
-                    v.plane.draw( mat4() ); 
+                    v.plane.draw(); 
                 } );
 
         reshape.connect( (r){ 
