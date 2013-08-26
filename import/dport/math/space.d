@@ -31,7 +31,6 @@ interface Node
 class Resolver
 {
     /++ 
-        единственный метод
         Params:
         obj = объект, который рендерится
         cam = объект, взятый за камеру
@@ -43,9 +42,9 @@ class Resolver
         obj_branch ~= obj;
         cam_branch ~= cam;
 
-        while( obj_branch[$-1] )
+        while( obj_branch[$-1] !is null )
             obj_branch ~= obj_branch[$-1].parent;
-        while( cam_branch[$-1] )
+        while( cam_branch[$-1] !is null )
             cam_branch ~= cam_branch[$-1].parent;
 
         top: 
@@ -70,4 +69,7 @@ class Resolver
 
         return cam_mtr * obj_mtr;
     }
+
+    /++ переопределять для кэширования матриц +/
+    //mat4 opCall( const Node obj, const Node cam ) { return opCall( obj, cam ); }
 }
