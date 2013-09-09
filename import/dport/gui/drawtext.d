@@ -332,7 +332,7 @@ public:
 
         processEvent = procEv;
 
-        debug log.info( "TextString create" );
+        debug log.Debug( "TextString create" );
 
     }
 
@@ -346,12 +346,12 @@ public:
     {
         version(Windows) 
         { 
-            debug log.info( "use WINDOWS_WTF" );
+            debug log.Debug( "use WINDOWS_WTF" );
             fr = new WindowsTypeRender( fontname );
         }
         else
         {
-            debug log.info( "use FreeType" );
+            debug log.Debug( "use FreeType" );
             fr = FreeTypeRender.get( fontname );
         }
     }
