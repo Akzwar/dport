@@ -5,6 +5,21 @@ module dport.gui.rshape;
 
 import derelict.opengl3.gl3;
 
+version(Windows)
+{
+
+}
+else
+{
+    pragma(lib, "dl");
+
+    version(DigitalMars)
+    {
+        pragma(lib, "Derelict3/lib/dmd/libDerelictGL3.a");
+        pragma(lib, "Derelict3/lib/dmd/libDerelictUtil.a");
+    }
+}
+
 import dport.math.types;
 import dport.utils.system;
 

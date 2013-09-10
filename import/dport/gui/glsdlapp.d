@@ -12,6 +12,22 @@ import std.datetime,
 import dport.gui.base;
 import dport.utils.system;
 
+version(Windows)
+{
+
+}
+else
+{
+    pragma(lib, "dl");
+
+    version(DigitalMars)
+    {
+        pragma(lib, "Derelict3/lib/dmd/libDerelictGL3.a");
+        pragma(lib, "Derelict3/lib/dmd/libDerelictSDL2.a");
+        pragma(lib, "Derelict3/lib/dmd/libDerelictUtil.a");
+    }
+}
+
 mixin( defaultModuleLogUtils("GLSDLAppException") );
 
 string toDString( const(char*) c_str )

@@ -17,6 +17,22 @@ import dport.gui.rshape;
 
 import std.string;
 
+version(Windows)
+{
+
+}
+else
+{
+    pragma(lib, "dl");
+
+    version(DigitalMars)
+    {
+        pragma(lib, "Derelict3/lib/dmd/libDerelictGL3.a");
+        pragma(lib, "Derelict3/lib/dmd/libDerelictFT.a");
+        pragma(lib, "Derelict3/lib/dmd/libDerelictUtil.a");
+    }
+}
+
 mixin( defaultModuleLogUtils("DTException") );
 
 alias vrect!float frect; /// прямоугольник плавающеточечный

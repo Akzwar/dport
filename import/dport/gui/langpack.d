@@ -38,7 +38,7 @@ public:
         auto tr = key in data;
         if( tr !is null ) 
         {
-            auto word = lang in *tr;
+            auto word = lang in (*tr);
             if( word !is null ) 
             {
                 final switch(reg)

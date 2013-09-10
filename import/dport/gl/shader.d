@@ -6,6 +6,21 @@ import dport.utils.system;
 import std.conv, std.string;
 import derelict.opengl3.gl3;
 
+version(Windows)
+{
+
+}
+else
+{
+    pragma(lib, "dl");
+
+    version(DigitalMars)
+    {
+        pragma(lib, "Derelict3/lib/dmd/libDerelictUtil.a");
+        pragma(lib, "Derelict3/lib/dmd/libDerelictGL3.a");
+    }
+}
+
 mixin( defaultModuleLogUtils("ShaderException") );
 
 struct ShaderSources { string vert, frag, geom; }
