@@ -338,74 +338,82 @@ public:
         debug log.Debug( "set view: ", vh.rect._rect );
     }
 
+    auto mpos = ivec2( 0, 0 );
+
+    void prepare()
+    {
+        mpos = ivec2( 0, 0 );
+        sw.start();
+    }
+
+    bool singleStep()
+    {
+        SDL_Event event;
+        while( SDL_PollEvent(&event) )
+        {
+            switch( event.type )
+            {
+                case SDL_QUIT: 
+                    return false; 
+                    debug log.Debug( "SDL_QUIT" );
+                    break;
+
+                case SDL_WINDOWEVENT: window_eh( event.window ); break;
+
+                case SDL_TEXTINPUT: textinput_eh( mpos, event.text ); break;
+
+                case SDL_KEYDOWN: 
+                case SDL_KEYUP: keyboard_eh( mpos, event.key ); break;
+
+                case SDL_JOYAXISMOTION: 
+                    joystick_eh( mpos, event.jaxis.which, 
+                            JoyEvent.Type.AXIS, event.jaxis.axis );
+                    break;
+                case SDL_JOYBUTTONUP: 
+                case SDL_JOYBUTTONDOWN:
+                    joystick_eh( mpos, event.jbutton.which, 
+                            JoyEvent.Type.BUTTON, event.jbutton.button );
+                    break;
+                case SDL_JOYBALLMOTION:
+                    joystick_eh( mpos, event.jball.which, 
+                            JoyEvent.Type.BALL, event.jball.ball );
+                    break;
+                case SDL_JOYHATMOTION:
+                    joystick_eh( mpos, event.jhat.which, 
+                            JoyEvent.Type.HAT, event.jhat.hat );
+                    break;
+
+                case SDL_MOUSEBUTTONDOWN: 
+                case SDL_MOUSEBUTTONUP:
+                    mpos.x = event.button.x;
+                    mpos.y = event.button.y;
+                    mouse_button_eh( mpos, event.button );
+                    break;
+                case SDL_MOUSEMOTION:
+                    mpos.x = event.motion.x;
+                    mpos.y = event.motion.y;
+                    mouse_motion_eh( mpos, event.motion );
+                    break;
+                case SDL_MOUSEWHEEL:
+                    mouse_wheel_eh( mpos, event.wheel );
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        idle();
+        draw();
+        SDL_GL_SwapWindow( window );
+        SDL_Delay(1);
+
+        return true;
+    }
+
     void mainLoop()
     {
-        sw.start();
-        bool run = true;
-
-        auto mpos = ivec2( 0, 0 );
-
-        SDL_Event event;
-        while( run )
-        {
-            while( SDL_PollEvent(&event) )
-            {
-                switch( event.type )
-                {
-                    case SDL_QUIT: 
-                        run = false; 
-                        debug log.Debug( "SDL_QUIT" );
-                        break;
-
-                    case SDL_WINDOWEVENT: window_eh( event.window ); break;
-
-                    case SDL_TEXTINPUT: textinput_eh( mpos, event.text ); break;
-
-                    case SDL_KEYDOWN: 
-                    case SDL_KEYUP: keyboard_eh( mpos, event.key ); break;
-
-                    case SDL_JOYAXISMOTION: 
-                        joystick_eh( mpos, event.jaxis.which, 
-                                JoyEvent.Type.AXIS, event.jaxis.axis );
-                        break;
-                    case SDL_JOYBUTTONUP: 
-                    case SDL_JOYBUTTONDOWN:
-                        joystick_eh( mpos, event.jbutton.which, 
-                                JoyEvent.Type.BUTTON, event.jbutton.button );
-                        break;
-                    case SDL_JOYBALLMOTION:
-                        joystick_eh( mpos, event.jball.which, 
-                                JoyEvent.Type.BALL, event.jball.ball );
-                        break;
-                    case SDL_JOYHATMOTION:
-                        joystick_eh( mpos, event.jhat.which, 
-                                JoyEvent.Type.HAT, event.jhat.hat );
-                        break;
-
-                    case SDL_MOUSEBUTTONDOWN: 
-                    case SDL_MOUSEBUTTONUP:
-                        mpos.x = event.button.x;
-                        mpos.y = event.button.y;
-                        mouse_button_eh( mpos, event.button );
-                        break;
-                    case SDL_MOUSEMOTION:
-                        mpos.x = event.motion.x;
-                        mpos.y = event.motion.y;
-                        mouse_motion_eh( mpos, event.motion );
-                        break;
-                    case SDL_MOUSEWHEEL:
-                        mouse_wheel_eh( mpos, event.wheel );
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            idle();
-            draw();
-            SDL_GL_SwapWindow( window );
-            SDL_Delay(1);
-        }
+        prepare();
+        while( singleStep() ){}
         debug log.Debug( "exit mainLoop" );
     }
 

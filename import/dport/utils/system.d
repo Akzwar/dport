@@ -14,18 +14,23 @@ class SystemInfo
 {
     import std.file,
            std.path,
-           std.string;
+           std.string,
+           core.sync.mutex;
 
     string path;
 
-    this( string[] args )
-    { path = buildNormalizedPath( dirName( absolutePath( args[0] ) ), "." ); }
+    synchronized this( string[] args )
+    { 
+        path = buildNormalizedPath( dirName( absolutePath( args[0] ) ), "." ); 
+    }
 
-    string getPath( string file ) const
-    { return buildNormalizedPath( path, file ).dup; }
+    synchronized string getPath( string file ) const
+    { 
+        return buildNormalizedPath( path, file ).dup; 
+    }
 }
 
-SystemInfo sysinfo;
+shared(SystemInfo) sysinfo;
 
 private
 {
@@ -170,7 +175,7 @@ class DPortException: Exception
 
 void initLogging( string[] args ) 
 { 
-    sysinfo = new SystemInfo( args );
+    sysinfo = new shared(SystemInfo)( args );
 
     auto tid = spawn( &log_loop, args.idup );
     receiveOnly!int();
